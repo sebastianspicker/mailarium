@@ -1,5 +1,9 @@
 """Tests for EventMixin in db_events.py (coverage track)."""
 
+# pylint: disable=redefined-outer-name
+# W0621: pytest fixture injection — test class methods receive ``db`` fixture as a parameter,
+# which pylint misidentifies as shadowing the module-level fixture definition.
+
 from __future__ import annotations
 
 import hashlib
@@ -51,7 +55,7 @@ def _insert_email(db: EmailDatabase, uid: str = "uid1") -> None:
     db.conn.commit()
 
 
-def _row(
+def _row(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     key: str = "key1",
     uid: str = "uid1",
     kind: str = "absence",

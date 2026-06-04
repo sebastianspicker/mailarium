@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import subprocess
+import subprocess  # nosec B404 — test utility, runs git commands with hardcoded args from repo root; no user input
 from pathlib import Path
 
 from scripts import privacy_scan

@@ -1,3 +1,6 @@
+# pylint: disable=unused-wildcard-import,wildcard-import
+
+
 import pytest
 
 from ._qa_eval_scoring_tail_cases import *  # noqa: F403
