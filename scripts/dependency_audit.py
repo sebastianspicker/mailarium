@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import argparse
 import os
-import subprocess
+import subprocess  # nosec B404: runs pip_audit with hardcoded args+CVEs; no user input in command
 import sys
 
 DEFAULT_TIMEOUT_SECONDS = 180
