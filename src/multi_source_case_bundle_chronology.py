@@ -1,4 +1,8 @@
 # mypy: disable-error-code=name-defined
+# pylint: disable=too-many-branches,too-many-locals,too-many-statements
+
+
+# pylint: disable=E0602  # cross-module names injected by compatibility facade
 """Split multi-source case-bundle helpers (multi_source_case_bundle_chronology)."""
 
 from __future__ import annotations
@@ -188,7 +192,7 @@ def _ical_to_iso(value: str, *, tzid: str = "") -> tuple[str, str]:
         if tzid:
             try:
                 return naive.replace(tzinfo=ZoneInfo(tzid)).isoformat(timespec="seconds"), "resolved_tzid"
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
                 return f"{year}-{month}-{day}T{hour}:{minute}:{second or '00'}", "invalid_tzid"
         return f"{year}-{month}-{day}T{hour}:{minute}:{second or '00'}", "floating"
     return f"{year}-{month}-{day}", "date_only"

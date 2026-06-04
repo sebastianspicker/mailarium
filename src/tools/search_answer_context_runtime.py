@@ -1,5 +1,5 @@
 # mypy: disable-error-code=name-defined
-# ruff: noqa: F403, F405, RUF022
+# ruff: noqa: F401, RUF022
 """Compatibility facade for split answer-context runtime helpers."""
 
 from __future__ import annotations
@@ -8,14 +8,48 @@ from . import search_answer_context_runtime_budgeting as _search_answer_context_
 from . import search_answer_context_runtime_builder as _search_answer_context_runtime_builder
 from . import search_answer_context_runtime_candidate_rows as _search_answer_context_runtime_candidate_rows
 from . import search_answer_context_runtime_lanes as _search_answer_context_runtime_lanes
+from . import search_answer_context_runtime_multi_lane as _search_answer_context_runtime_multi_lane
 from . import search_answer_context_runtime_ranking as _search_answer_context_runtime_ranking
 from . import search_answer_context_runtime_search as _search_answer_context_runtime_search
-from .search_answer_context_runtime_budgeting import *
-from .search_answer_context_runtime_builder import *
-from .search_answer_context_runtime_candidate_rows import *
-from .search_answer_context_runtime_lanes import *
-from .search_answer_context_runtime_ranking import *
-from .search_answer_context_runtime_search import *
+from . import search_answer_context_runtime_single_lane as _search_answer_context_runtime_single_lane
+from .search_answer_context_runtime_budgeting import (
+    _trim_candidate_for_budget,
+    _trim_provenance_for_budget,
+    _trim_snippet_for_budget,
+)
+from .search_answer_context_runtime_builder import (
+    build_answer_context_payload as _build_answer_context_payload_impl,
+)
+from .search_answer_context_runtime_candidate_rows import build_initial_candidate_rows
+from .search_answer_context_runtime_lanes import (
+    _derive_query_lanes,
+    _segment_search_results,
+)
+from .search_answer_context_runtime_multi_lane import _search_multi_lane
+from .search_answer_context_runtime_ranking import (
+    _bank_entry,
+    _evidence_bank_keys_with_lane_diversity,
+    _evidence_bank_keys_with_support_diversity,
+    _lane_expansion_terms,
+    _lane_recovered_expansion_terms,
+    _record_lane_match,
+    _result_competition_key,
+    _result_competition_score,
+    _result_identity_key,
+    _result_search_surface,
+    _support_type_for_result,
+    _support_type_for_row,
+    _term_tokens,
+)
+from .search_answer_context_runtime_search import _search_across_query_lanes
+from .search_answer_context_runtime_single_lane import (
+    _apply_filter_seen,
+    _assemble_single_lane_results,
+    _build_evidence_bank,
+    _build_lane_diagnostics_item,
+    _compute_support_type_counts,
+    _search_single_lane,
+)
 from .utils import json_response
 
 _SPLIT_MODULES = (
@@ -23,28 +57,23 @@ _SPLIT_MODULES = (
     _search_answer_context_runtime_ranking,
     _search_answer_context_runtime_budgeting,
     _search_answer_context_runtime_search,
+    _search_answer_context_runtime_single_lane,
+    _search_answer_context_runtime_multi_lane,
     _search_answer_context_runtime_candidate_rows,
     _search_answer_context_runtime_builder,
 )
-_WRAPPED_EXPORTS = {
-    "build_answer_context",
-    "build_answer_context_payload",
-}
 
 
 def _bind_split_namespace() -> None:
+    """Cross-inject all split-module exports so sub-modules see each other's names."""
     namespace = {}
     for module in _SPLIT_MODULES:
         namespace.update({name: getattr(module, name) for name in getattr(module, "__all__", ())})
     for module in _SPLIT_MODULES:
         module.__dict__.update(namespace)
-    globals().update({key: value for key, value in namespace.items() if key not in _WRAPPED_EXPORTS})
 
 
 _bind_split_namespace()
-
-
-_build_answer_context_payload_impl = _search_answer_context_runtime_builder.build_answer_context_payload
 
 
 def _sync_patchable_runtime_globals() -> None:

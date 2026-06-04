@@ -1,4 +1,8 @@
 # mypy: disable-error-code=name-defined
+# pylint: disable=too-many-locals
+
+
+# pylint: disable=E0602  # cross-module names injected by compatibility facade
 """Split multi-source case-bundle helpers (multi_source_case_bundle_sources)."""
 
 from __future__ import annotations

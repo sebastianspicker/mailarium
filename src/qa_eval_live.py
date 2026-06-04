@@ -1,4 +1,7 @@
 """Live QA-eval dependency resolution and SQLite fallback retrieval."""
+# pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements
+
+
 
 from __future__ import annotations
 
@@ -9,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .db_schema import _escape_like
 from .repo_paths import repo_root as _repo_root
 from .sanitization import sanitize_untrusted_text
 from .tools.utils import ToolDepsProto
@@ -246,14 +250,14 @@ class _SQLiteEvalRetriever:
         params: list[Any] = []
         if sender:
             conditions.append("(sender_email LIKE ? ESCAPE '\\' OR sender_name LIKE ? ESCAPE '\\')")
-            needle = f"%{sender}%"
+            needle = f"%{_escape_like(sender)}%"
             params.extend([needle, needle])
         if subject:
             conditions.append("subject LIKE ? ESCAPE '\\'")
-            params.append(f"%{subject}%")
+            params.append(f"%{_escape_like(subject)}%")
         if folder:
             conditions.append("folder LIKE ? ESCAPE '\\'")
-            params.append(f"%{folder}%")
+            params.append(f"%{_escape_like(folder)}%")
         if has_attachments is not None:
             conditions.append("has_attachments = ?")
             params.append(1 if has_attachments else 0)
@@ -267,7 +271,8 @@ class _SQLiteEvalRetriever:
             conditions.append("SUBSTR(date, 1, 10) <= ?")
             params.append(date_to[:10])
         where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
-        rows = self.email_db.conn.execute(f"SELECT * FROM emails{where}", params).fetchall()  # nosec
+        query = f"SELECT * FROM emails{where}"
+        rows = self.email_db.conn.execute(query, params).fetchall()
         return [dict(row) for row in rows]
 
     def _body_result(self, email: dict[str, Any], score: float, *, rank_score: float | None = None) -> _SQLiteEvalSearchResult:
@@ -476,7 +481,7 @@ def _resolve_live_retriever(email_db: Any, *, preferred_backend: str = "auto") -
     except ModuleNotFoundError as exc:
         if preferred_backend == "embedding":
             raise
-        if exc.name and exc.name.startswith("chromadb"):
+        if exc.name and exc.name.startswith("chromadb"):  # pylint: disable=no-member
             return _SQLiteEvalRetriever(email_db)
         raise
     except ImportError as exc:

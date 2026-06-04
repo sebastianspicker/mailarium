@@ -1,4 +1,7 @@
 """Bootstrap reviewable QA eval question sets from templates plus sampled payloads."""
+# pylint: disable=too-many-locals
+
+
 
 from __future__ import annotations
 

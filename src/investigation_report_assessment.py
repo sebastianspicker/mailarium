@@ -1,4 +1,7 @@
 """Assessment-oriented helpers for investigation reports."""
+# pylint: disable=too-many-branches,too-many-locals
+
+
 
 from __future__ import annotations
 

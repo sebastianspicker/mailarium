@@ -6,6 +6,7 @@ and an appendix containing the full source email text for each finding.
 
 from __future__ import annotations
 
+# pylint: disable=too-many-locals
 import csv
 import io
 import logging
@@ -54,9 +55,14 @@ class EvidenceExporter:
         )
 
         def _strip_html_safe(value: str | None) -> Markup:
-            """Strip HTML tags then escape for safe Jinja2 rendering."""
+            """Strip HTML tags then escape for safe Jinja2 rendering.
+
+            The pipeline: raw value → strip all HTML tags → Jinja2 escape.
+            Wrapping in ``Markup`` is safe because the value has been
+            HTML-stripped and re-escaped before being marked as safe.
+            """
             cleaned = strip_html_tags(value)
-            return Markup(escape(cleaned))  # nosec
+            return Markup(escape(cleaned))  # HTML-stripped then escaped before marking safe
 
         self._env.filters["strip_html"] = _strip_html_safe
 

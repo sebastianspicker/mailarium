@@ -1,4 +1,7 @@
 """KMeans clustering for email archives using pre-computed embeddings."""
+# pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
+
+
 
 from __future__ import annotations
 
@@ -75,7 +78,7 @@ class EmailClusterer:
         # Sample for speed
         sample_size = min(2000, n)
         if sample_size < n:
-            rng = np.random.RandomState(42)
+            rng = np.random.RandomState(42)  # pylint: disable=no-member
             indices = rng.choice(n, sample_size, replace=False)
             sample = embeddings[indices]
         else:
@@ -117,7 +120,7 @@ class EmailClusterer:
             labels, centroids, inertia = EmailClusterer._fit_kmeans_once(
                 data,
                 n_clusters,
-                np.random.RandomState(seed),
+                np.random.RandomState(seed),  # pylint: disable=no-member
                 max_iter=max_iter,
             )
             if inertia < best_inertia:

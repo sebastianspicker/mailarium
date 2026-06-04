@@ -1,4 +1,7 @@
 """Helper functions for comparative-treatment analysis."""
+# pylint: disable=too-many-boolean-expressions,too-many-branches,too-many-locals
+
+
 
 from __future__ import annotations
 
@@ -103,12 +106,10 @@ def recipient_emails(full_email: dict[str, Any] | None) -> list[str]:
     emails: list[str] = []
     for field in ("to", "cc", "bcc"):
         for value in (full_email or {}).get(field) or []:
-            match = _EMAIL_RE.search(str(value or ""))
-            if not match:
-                continue
-            email = match.group(1).lower()
-            if email not in emails:
-                emails.append(email)
+            for match in _EMAIL_RE.finditer(str(value or "")):
+                email = match.group(1).lower()
+                if email not in emails:
+                    emails.append(email)
     return emails
 
 
@@ -123,7 +124,11 @@ def behavior_ids(candidate: dict[str, Any]) -> list[str]:
 
 def normalized_subject(value: str) -> str:
     normalized = str(value or "").strip().lower()
-    normalized = re.sub(r"^(re|fw|fwd|aw|wg)\s*:\s*", "", normalized)
+    while True:
+        updated = re.sub(r"^(re|fw|fwd|aw|wg)\s*:\s*", "", normalized)
+        if updated == normalized:
+            break
+        normalized = updated
     return re.sub(r"\s+", " ", normalized).strip()
 
 

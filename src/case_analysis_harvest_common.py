@@ -1,4 +1,8 @@
 # mypy: disable-error-code=name-defined
+# pylint: disable=too-many-arguments,too-many-locals
+
+
+# pylint: disable=E0602  # cross-module names injected by compatibility facade
 """Split archive-harvest helpers (case_analysis_harvest_common)."""
 
 from __future__ import annotations
@@ -18,6 +22,8 @@ if TYPE_CHECKING:
 
 # ruff: noqa: F401
 
+_EXPANSION_ERROR_SAMPLE_LIMIT = 8
+
 
 def _compact(value: Any) -> str:
     return " ".join(str(value or "").split()).strip()
@@ -36,7 +42,7 @@ def _date_span_days(params: EmailCaseAnalysisInput) -> int:
     try:
         start = date.fromisoformat(str(params.case_scope.date_from))
         end = date.fromisoformat(str(params.case_scope.date_to))
-    except Exception:
+    except (ValueError, TypeError):
         return 0
     return max((end - start).days, 0)
 
@@ -71,7 +77,7 @@ def _archive_size_hint(retriever: Any) -> dict[str, Any]:
         return {"total_emails": 0}
     try:
         stats = stats_fn()
-    except Exception:
+    except (TypeError, ValueError, RuntimeError, AttributeError):
         return {"total_emails": 0}
     if not isinstance(stats, dict):
         return {"total_emails": 0}
@@ -221,15 +227,102 @@ def _adaptive_harvest_plan(
     }
 
 
+def _best_body_text(email_row: dict[str, Any]) -> str:
+    for key in ("forensic_body_text", "body_text", "raw_body_text", "subject"):
+        text = _compact(email_row.get(key))
+        if text:
+            return text
+    return ""
+
+
+def _email_language_fields(email_row: dict[str, Any]) -> dict[str, str]:
+    return {
+        "detected_language": _compact(email_row.get("detected_language")),
+        "detected_language_confidence": _compact(email_row.get("detected_language_confidence")),
+    }
+
+
+def _build_enriched_row_identity(
+    index: int,
+    entry: dict[str, Any],
+    metadata: dict[str, Any],
+    result: Any,
+    *,
+    snippet: str = "",
+    body_render_mode: str = "full",
+    body_render_source: str = "",
+    verification_status: str = "",
+    provenance: dict[str, Any] | None = None,
+    candidate_kind: str = "body",
+    harvest_source: str = "search_result",
+    recipients_summary: Any = None,
+    speaker_attribution: Any = None,
+    reply_context_from: str = "",
+    reply_context_emails: list[str] | None = None,
+    thread_locator: dict[str, Any] | None = None,
+    email_language_source: dict[str, Any] | None = None,
+    extra_fields: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    uid = _compact(metadata.get("uid"))
+    row: dict[str, Any] = {
+        **dict(entry),
+        "rank": index + 1,
+        "uid": uid,
+        "subject": metadata.get("subject", ""),
+        "sender_email": metadata.get("sender_email", ""),
+        "sender_name": metadata.get("sender_name", ""),
+        "date": metadata.get("date", ""),
+        "conversation_id": metadata.get("conversation_id", ""),
+        "score": float(getattr(result, "score", 0.0) or 0.0),
+        "snippet": snippet,
+        "body_render_mode": body_render_mode,
+        "body_render_source": body_render_source,
+        "verification_status": verification_status,
+        "provenance": provenance or {},
+        "candidate_kind": candidate_kind,
+        "harvest_source": harvest_source,
+        "harvest_round": int(entry.get("harvest_round") or 0),
+    }
+    row.update(_email_language_fields(email_language_source or metadata))
+    if recipients_summary is not None:
+        row["recipients_summary"] = recipients_summary
+    if speaker_attribution is not None:
+        row["speaker_attribution"] = speaker_attribution
+    if reply_context_from:
+        row["reply_context_from"] = reply_context_from
+    if reply_context_emails:
+        row["reply_context_emails"] = reply_context_emails
+    if thread_locator:
+        row.update(thread_locator)
+    if extra_fields:
+        row.update(extra_fields)
+    return row
+
+
+def _expansion_error_entry(
+    diagnostics: dict[str, Any],
+    error_fields: dict[str, Any],
+) -> None:
+    diagnostics["error_count"] = int(diagnostics.get("error_count") or 0) + 1
+    errors = cast(list[dict[str, Any]], diagnostics.setdefault("errors", []))
+    if len(errors) < _EXPANSION_ERROR_SAMPLE_LIMIT:
+        errors.append(error_fields)
+
+
 __all__ = [
+    "_EXPANSION_ERROR_SAMPLE_LIMIT",
     "_adaptive_harvest_plan",
     "_annotate_round",
     "_archive_size_hint",
+    "_best_body_text",
+    "_build_enriched_row_identity",
     "_coerce_month_bucket",
     "_compact",
     "_coverage_signature",
     "_date_span_days",
     "_dedupe_evidence_rows",
+    "_email_language_fields",
+    "_expansion_error_entry",
     "_mixed_source_harvest_inputs",
     "_round_recovered_keys",
     "_row_identity",

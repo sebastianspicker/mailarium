@@ -1,4 +1,7 @@
 """Attachment source-format and extraction-quality profiles."""
+# pylint: disable=too-many-arguments,too-many-branches,too-many-return-statements
+
+
 
 from __future__ import annotations
 

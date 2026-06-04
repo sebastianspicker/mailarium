@@ -92,7 +92,7 @@ def ensure_attachment_identity(
 def attachment_chunk_token(*, attachment_id: str, filename: str, att_index: int) -> str:
     """Return a stable compact token suitable for chunk ids."""
     seed = _compact(attachment_id) or f"{_normalized_filename(filename)}#{att_index}"
-    return hashlib.md5(seed.encode("utf-8", errors="ignore"), usedforsecurity=False).hexdigest()[:16]
+    return hashlib.sha256(seed.encode("utf-8", errors="ignore")).hexdigest()[:16]
 
 
 def normalize_attachment_search_text(text: str) -> str:

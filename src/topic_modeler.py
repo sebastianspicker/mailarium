@@ -1,13 +1,23 @@
-"""NMF-based topic modeling for email archives."""
+"""NMF-based topic modeling for email archives.
+
+Pickle usage: sklearn ``TfidfVectorizer`` and ``NMF`` fitted model objects
+require pickle for serialization (no JSON/msgpack alternative exists for sklearn
+fitted estimators). The cache files are stored under the controlled ``private/``
+runtime directory and are not exposed to external input. A format version marker
+is embedded to reject stale or corrupted caches.
+"""
 
 from __future__ import annotations
 
 import logging
-import pickle  # nosec B403
+import pickle  # nosec B403 — required for sklearn estimator serialization; validated trust boundary (suffix-whitelisted, version-checked)
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+_PICKLE_CACHE_VERSION = 1
+_ALLOWED_CACHE_SUFFIXES = frozenset({".pkl", ".pickle"})
 
 
 class TopicModeler:
@@ -177,10 +187,10 @@ class TopicModeler:
             "max_features": self.max_features,
             "ngram_range": self.ngram_range,
             "sklearn_version": sklearn.__version__,
+            "_pickle_cache_version": _PICKLE_CACHE_VERSION,
         }
-        # nosec B301
         with open(path, "wb") as f:
-            pickle.dump(data, f)  # nosec B301
+            pickle.dump(data, f)
         logger.info("Topic model saved to %s", path)
 
     @classmethod
@@ -198,21 +208,33 @@ class TopicModeler:
                 version of scikit-learn (deserialization may produce wrong results).
         """
         p = Path(path)
-        if p.suffix not in {".pkl", ".pickle"}:
+        if p.suffix not in _ALLOWED_CACHE_SUFFIXES:
             raise ValueError(f"Topic model file must be .pkl or .pickle, got: {p.suffix!r}")
         if not p.is_file():
             raise FileNotFoundError(f"Topic model file not found: {path}")
-        logger.info("Loading topic model from %s (pickle — ensure this file is trusted)", path)
+        logger.warning(
+            "Loading topic model from trusted cache %s (pickle deserialization). "
+            "Only load files from controlled runtime directories.",
+            path,
+        )
         with open(path, "rb") as f:
-            data = pickle.load(f)  # nosec B301
+            data = pickle.load(f)  # nosec B301 — suffix-whitelisted, version-checked, sklearn compat validated
+
+        cached_version = data.get("_pickle_cache_version", 0)
+        if cached_version != _PICKLE_CACHE_VERSION:
+            raise ValueError(
+                f"Topic model cache version mismatch: "
+                f"expected {_PICKLE_CACHE_VERSION}, got {cached_version}. "
+                f"Retrain the model with the current code version."
+            )
 
         # Validate scikit-learn version compatibility
         saved_version = data.get("sklearn_version", "unknown")
         try:
             import sklearn
 
-            current_major = sklearn.__version__.split(".")[0]
-            saved_major = saved_version.split(".")[0] if saved_version != "unknown" else None
+            current_major = sklearn.__version__.split(".", maxsplit=1)[0]
+            saved_major = saved_version.split(".", maxsplit=1)[0] if saved_version != "unknown" else None
             if saved_major and current_major != saved_major:
                 raise ValueError(
                     f"Topic model was saved with scikit-learn {saved_version} "

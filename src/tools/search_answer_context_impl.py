@@ -1,4 +1,7 @@
 """Answer-context helpers extracted from ``src.tools.search``."""
+# pylint: disable=too-many-arguments,too-many-locals,too-many-return-statements
+
+
 
 from __future__ import annotations
 

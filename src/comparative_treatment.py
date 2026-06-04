@@ -1,4 +1,7 @@
 """Comparative-treatment helpers for behavioural-analysis cases."""
+# pylint: disable=too-many-locals
+
+
 
 from __future__ import annotations
 

@@ -1,4 +1,7 @@
 """Pure payload-scoring helpers for QA evaluation."""
+# pylint: disable=too-many-locals,too-many-statements
+
+
 
 from __future__ import annotations
 

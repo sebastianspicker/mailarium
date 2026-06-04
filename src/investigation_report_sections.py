@@ -1,4 +1,7 @@
 """Pure section builders for investigation-style reports."""
+# pylint: disable=too-many-locals
+
+
 
 from __future__ import annotations
 

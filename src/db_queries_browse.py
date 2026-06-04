@@ -1,4 +1,7 @@
 """Browse and full-retrieval helpers for ``QueryMixin``."""
+# pylint: disable=too-many-arguments,too-many-locals
+
+
 
 from __future__ import annotations
 
@@ -6,7 +9,7 @@ import json
 import sqlite3
 from typing import Any
 
-from .db_schema import _escape_like
+from .db_schema import _escape_like, _sql_in_placeholders, _validate_order_by
 
 
 def safe_json_parse(raw: str | None, default: list | dict | None = None) -> list | dict:
@@ -58,10 +61,10 @@ def attachments_for_uids(conn: sqlite3.Connection, uids: list[str], *, batch_siz
         return attachments_by_uid
     for start in range(0, len(uids), batch_size):
         batch = uids[start : start + batch_size]
-        placeholders = ",".join("?" * len(batch))
+        placeholders = _sql_in_placeholders(batch)
         att_rows = conn.execute(
-            "SELECT name, mime_type, size, content_id, is_inline, email_uid"  # nosec
-            f" FROM attachments WHERE email_uid IN ({placeholders})",
+            "SELECT name, mime_type, size, content_id, is_inline, email_uid"
+            f" FROM attachments WHERE email_uid IN ({placeholders})",  # B608 — placeholders are ? markers, values bound as params
             batch,
         ).fetchall()
         for attachment in att_rows:
@@ -98,9 +101,9 @@ def recipients_for_uids_impl(db: Any, uids: list[str]) -> dict[str, dict[str, li
     batch_size = 900
     for start in range(0, len(uids), batch_size):
         batch = uids[start : start + batch_size]
-        placeholders = ",".join("?" * len(batch))
+        placeholders = _sql_in_placeholders(batch)
         rows = db.conn.execute(
-            f"SELECT address, display_name, type, email_uid FROM recipients WHERE email_uid IN ({placeholders})",  # nosec
+            f"SELECT address, display_name, type, email_uid FROM recipients WHERE email_uid IN ({placeholders})",  # B608 — placeholders are ? markers
             batch,
         ).fetchall()
         for row in rows:
@@ -142,10 +145,10 @@ def get_emails_full_batch_impl(db: Any, uids: list[str]) -> dict[str, dict]:
     batch_size = 900
     for start in range(0, len(uids), batch_size):
         batch = uids[start : start + batch_size]
-        placeholders = ",".join("?" * len(batch))
+        placeholders = _sql_in_placeholders(batch)
         rows.extend(
             db.conn.execute(
-                f"SELECT * FROM emails WHERE uid IN ({placeholders})",  # nosec
+                f"SELECT * FROM emails WHERE uid IN ({placeholders})",  # B608 — placeholders are ? markers
                 batch,
             ).fetchall()
         )
@@ -214,9 +217,10 @@ def list_emails_paginated_impl(
 ) -> dict:
     """Return a page of emails with metadata for browsing."""
     allowed_sort = {"date", "subject", "sender_email", "folder"}
-    if sort_by not in allowed_sort:
-        sort_by = "date"
-    sort_order = "ASC" if sort_order.upper() == "ASC" else "DESC"
+    try:
+        sort_by, sort_order = _validate_order_by(sort_by, sort_order, allowed_columns=allowed_sort)
+    except ValueError:
+        sort_by, sort_order = "date", "DESC"
     if offset < 0:
         offset = 0
     if limit < 1:
@@ -244,16 +248,16 @@ def list_emails_paginated_impl(
 
     where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
 
-    total_row = db.conn.execute(f"SELECT COUNT(*) AS c FROM emails{join}{where}", params).fetchone()  # nosec
+    total_row = db.conn.execute(f"SELECT COUNT(*) AS c FROM emails{join}{where}", params).fetchone()
     total = total_row["c"]
 
     rows = db.conn.execute(
-        f"SELECT emails.uid, subject, sender_name, sender_email, date, folder,"  # nosec
-        f" email_type, has_attachments, attachment_count, body_length,"
-        f" conversation_id"
+        "SELECT emails.uid, subject, sender_name, sender_email, date, folder,"  # B608 — validated sort column/direction, bound params
+        " email_type, has_attachments, attachment_count, body_length,"
+        " conversation_id"
         f" FROM emails{join}{where}"
         f" ORDER BY {sort_by} {sort_order}"
-        f" LIMIT ? OFFSET ?",
+        " LIMIT ? OFFSET ?",
         [*params, limit, offset],
     ).fetchall()
 
