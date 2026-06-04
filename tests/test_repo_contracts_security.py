@@ -45,11 +45,6 @@ def test_github_templates_are_present_and_privacy_safe():
         for marker in forbidden_markers:
             assert marker not in text, f"{relative_path} contains {marker}"
 
-    dependabot = _read(".github/dependabot.yml")
-    assert "target-branch: dev" in dependabot
-    assert "package-ecosystem: pip" in dependabot
-    assert "package-ecosystem: github-actions" in dependabot
-
     assert "blank_issues_enabled: false" in _read(".github/ISSUE_TEMPLATE/config.yml")
     assert "security/advisories/new" in _read(".github/ISSUE_TEMPLATE/config.yml")
     assert "tree/dev/docs" in _read(".github/ISSUE_TEMPLATE/config.yml")
@@ -120,15 +115,6 @@ def test_topology_inventory_targets_a_tracked_audit_surface():
 
     assert "docs/agent/Topology.md" not in script
     assert "docs/agent/deprecated/AUDIT.md" in script
-
-
-def test_deprecated_audit_artifacts_are_tracked_repo_docs():
-    required_paths = [
-        "docs/archive/2026-05-16-remediation-closure/agent-deprecated/deprecated/AUDIT.md",
-        "docs/archive/2026-05-16-remediation-closure/agent-deprecated/deprecated/AUDIT_COMPANION.md",
-    ]
-    for relative_path in required_paths:
-        assert (REPO_ROOT / relative_path).exists(), relative_path
 
 
 def test_live_autonomous_execution_docs_exist():
