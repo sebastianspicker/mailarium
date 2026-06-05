@@ -1,8 +1,6 @@
 """Filtered-search helper logic for the email retriever."""
 # pylint: disable=too-many-arguments,too-many-locals
 
-
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

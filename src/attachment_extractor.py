@@ -1,8 +1,6 @@
 """Extract text content from common attachment file types."""
 # pylint: disable=too-many-locals
 
-
-
 from __future__ import annotations
 
 import os
@@ -46,7 +44,7 @@ def _run_ocr_process(command: list[str], *, timeout_seconds: int) -> subprocess.
     executable = Path(command[0]).name if command else ""
     if executable not in {"tesseract", "pdftoppm"}:
         raise ValueError(f"Unsupported OCR executable: {executable!r}")
-    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use.dangerous-subprocess-use
+    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
         command,
         check=False,
         capture_output=True,

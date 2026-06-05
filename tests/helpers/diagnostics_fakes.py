@@ -57,6 +57,8 @@ class MockEmailDB:
             self.close()
         except Exception:  # pylint: disable=broad-exception-caught
             pass
+
+
 class MockDeps:
     _retriever = MockRetriever()
     _email_db = MockEmailDB()

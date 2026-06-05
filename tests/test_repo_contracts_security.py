@@ -10,7 +10,7 @@ from .helpers.repo_contracts import REPO_ROOT, _is_tracked, _read
 
 
 def _run_privacy_scan() -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use.dangerous-subprocess-use
+    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
         [sys.executable, "scripts/privacy_scan.py", "--tracked-only", "--json"],
         cwd=REPO_ROOT,
         text=True,

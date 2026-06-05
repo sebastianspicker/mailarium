@@ -1,8 +1,6 @@
 """RFC 2822 header/body parsing, MIME decoding, and iCalendar text extraction."""
 # pylint: disable=too-many-branches,too-many-statements
 
-
-
 from __future__ import annotations
 
 import email
@@ -69,6 +67,7 @@ def _normalize_date(value: str) -> str:
     except (ValueError, TypeError, OverflowError):
         logger.debug("Failed to parse date: %s", value[:80])
         return ""
+
 
 def _parse_int(value: str, default: int = 0) -> int:
     """Safely parse an integer from a string."""

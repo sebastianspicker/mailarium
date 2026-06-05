@@ -1,8 +1,6 @@
 """Legacy CLI compatibility helpers."""
 # pylint: disable=too-many-boolean-expressions,too-many-branches,too-many-return-statements,too-many-statements
 
-
-
 from __future__ import annotations
 
 import argparse

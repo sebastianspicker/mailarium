@@ -411,7 +411,9 @@ def test_build_case_full_pack_emits_actionable_override_suggestions_from_candida
     # pylint: disable-next=unsubscriptable-object
     trigger_suggestion = next(item for item in suggestions["suggestions"] if item["field"] == "case_scope.trigger_events")
     adverse_suggestion = next(  # pylint: disable=unsubscriptable-object
-        item for item in suggestions["suggestions"] if item["field"] == "case_scope.alleged_adverse_actions"  # pylint: disable=unsubscriptable-object
+        item
+        for item in suggestions["suggestions"]
+        if item["field"] == "case_scope.alleged_adverse_actions"  # pylint: disable=unsubscriptable-object
     )
     assert trigger_suggestion["candidate_values_adequate"] is True
     assert adverse_suggestion["candidate_values_adequate"] is True

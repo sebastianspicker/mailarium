@@ -1,8 +1,6 @@
 """Helpers for machine-readable local investigation result state."""
 # pylint: disable=too-many-arguments
 
-
-
 from __future__ import annotations
 
 import json

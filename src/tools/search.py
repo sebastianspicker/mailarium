@@ -1,8 +1,6 @@
 """Core search MCP tools (moved from mcp_server.py)."""
 # pylint: disable=too-many-branches,too-many-locals,too-many-statements
 
-
-
 from __future__ import annotations
 
 from typing import Any

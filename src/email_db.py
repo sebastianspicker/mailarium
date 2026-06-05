@@ -1,8 +1,6 @@
 """SQLite relational store for email metadata and relationships."""
 # pylint: disable=too-many-arguments,too-many-instance-attributes,too-many-locals,too-many-positional-arguments,too-many-public-methods
 
-
-
 from __future__ import annotations
 
 import json

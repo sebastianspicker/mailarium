@@ -1,8 +1,6 @@
 """Application configuration and logging helpers."""
 # pylint: disable=too-many-instance-attributes
 
-
-
 from __future__ import annotations
 
 import logging

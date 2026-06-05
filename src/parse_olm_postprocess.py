@@ -1,8 +1,6 @@
 """Post-processing helpers for parsed OLM email fields."""
 # pylint: disable=too-many-branches,too-many-instance-attributes
 
-
-
 from __future__ import annotations
 
 import logging

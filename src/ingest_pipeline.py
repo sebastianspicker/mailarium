@@ -1,8 +1,6 @@
 """Core ingestion pipeline implementation."""
 # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-nested-blocks,too-many-statements
 
-
-
 from __future__ import annotations
 
 import json

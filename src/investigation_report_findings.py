@@ -1,8 +1,6 @@
 """Finding- and triage-oriented helpers for investigation reports."""
 # pylint: disable=too-many-arguments,too-many-locals,redefined-outer-name
 
-
-
 from __future__ import annotations
 
 from typing import Any

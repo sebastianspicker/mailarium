@@ -1,8 +1,6 @@
 """Budgeting and evidence-packing helpers for answer context responses."""
 # pylint: disable=too-many-branches,too-many-return-statements
 
-
-
 from __future__ import annotations
 
 import json

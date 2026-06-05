@@ -1,8 +1,6 @@
 """Matter-manifest normalization and completeness-ledger helpers."""
 # pylint: disable=too-many-locals,too-many-return-statements
 
-
-
 from __future__ import annotations
 
 import re

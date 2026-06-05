@@ -1,8 +1,6 @@
 """Promise-versus-action, omission, and contradiction analysis for mixed-source records."""
 # pylint: disable=too-many-locals
 
-
-
 from __future__ import annotations
 
 import re

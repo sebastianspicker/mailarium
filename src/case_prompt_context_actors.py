@@ -1,8 +1,6 @@
 """Actor and mailbox extraction helpers for preserved matter context."""
 # pylint: disable=too-many-return-statements
 
-
-
 from __future__ import annotations
 
 import re

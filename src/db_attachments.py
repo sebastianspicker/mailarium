@@ -1,8 +1,6 @@
 """Attachment query mixin for EmailDatabase."""
 # pylint: disable=too-many-arguments,too-many-locals
 
-
-
 from __future__ import annotations
 
 import json

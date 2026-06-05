@@ -1,8 +1,6 @@
 """File-backed enrichment for operator-supplied matter manifests."""
 # pylint: disable=too-many-branches,too-many-locals,too-many-return-statements,too-many-statements
 
-
-
 from __future__ import annotations
 
 import copy

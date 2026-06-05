@@ -1,8 +1,6 @@
 """Near-duplicate email detection using character n-gram Jaccard similarity."""
 # pylint: disable=too-many-locals
 
-
-
 from __future__ import annotations
 
 import logging

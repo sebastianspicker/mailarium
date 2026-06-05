@@ -1,8 +1,6 @@
 """Data quality MCP tools."""
 # pylint: disable=too-many-locals,too-many-return-statements
 
-
-
 from __future__ import annotations
 
 import sqlite3

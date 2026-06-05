@@ -1,8 +1,6 @@
 """Candidate and conversation-group helpers for answer-context evidence output."""
 # pylint: disable=too-many-branches,too-many-locals
 
-
-
 from __future__ import annotations
 
 from typing import Any

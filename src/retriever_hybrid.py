@@ -1,8 +1,6 @@
 """Hybrid retrieval helpers extracted from ``src.retriever``."""
 # pylint: disable=too-many-locals
 
-
-
 from __future__ import annotations
 
 import logging

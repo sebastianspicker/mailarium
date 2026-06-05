@@ -1,8 +1,6 @@
 """Shared matter-workspace core for MCP-backed legal-support outputs."""
 # pylint: disable=too-many-branches,too-many-locals
 
-
-
 from __future__ import annotations
 
 import hashlib

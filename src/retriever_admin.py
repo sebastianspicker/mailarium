@@ -1,8 +1,6 @@
 """Administrative and metadata helpers for the retriever facade."""
 # pylint: disable=too-many-branches,too-many-locals
 
-
-
 from __future__ import annotations
 
 import logging

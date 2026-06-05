@@ -1,8 +1,6 @@
 """Precision-first inferred parent/thread matching."""
 # pylint: disable=too-many-branches,too-many-locals,too-many-statements
 
-
-
 from __future__ import annotations
 
 from dataclasses import dataclass

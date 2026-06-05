@@ -1,8 +1,6 @@
 """Evidence/dossier command-family implementations for the CLI."""
 # pylint: disable=too-many-locals,too-many-statements
 
-
-
 from __future__ import annotations
 
 from collections.abc import Callable

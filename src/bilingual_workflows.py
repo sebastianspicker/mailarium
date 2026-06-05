@@ -1,8 +1,6 @@
 """Shared bilingual and translation-aware metadata for legal-support outputs."""
 # pylint: disable=too-many-locals
 
-
-
 from __future__ import annotations
 
 from collections import Counter

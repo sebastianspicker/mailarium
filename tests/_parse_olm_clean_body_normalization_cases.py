@@ -29,9 +29,8 @@ from src.parse_olm_normalization import BODY_NORMALIZATION_VERSION
 # ── Email.uid fallback (lines 98-99) ─────────────────────────
 
 
-
-
 # ── Clean body HTML ─────────────────────────────────────────────
+
 
 class TestCleanBodyHtml:
     def test_clean_body_html_in_body_text_field(self):
@@ -101,8 +100,8 @@ class TestCleanBodyHtml:
         assert email.clean_body_source == "body_text_html"
 
 
-
 # ── Signatures and footers ──────────────────────────────────────
+
 
 class TestCleanBodySignatures:
     def test_clean_body_strips_mobile_signature_in_normalized_body(self):
@@ -177,8 +176,8 @@ class TestCleanBodySignatures:
         assert email.body_normalization_version == BODY_NORMALIZATION_VERSION
 
 
-
 # ── Legal disclaimers ──────────────────────────────────────────
+
 
 class TestCleanBodyLegalDisclaimers:
     def test_clean_body_strips_multiline_legal_disclaimer_tail(self):
@@ -222,8 +221,8 @@ class TestCleanBodyLegalDisclaimers:
         assert "Confidentiality notice" in email.clean_body
 
 
-
 # ── English reply / forward header stripping ──────────────────
+
 
 class TestCleanBodyEnglishReplyHeaders:
     def test_clean_body_strips_reply_quote_tail_before_persistence(self):
@@ -417,6 +416,7 @@ class TestCleanBodyEnglishReplyHeaders:
 
 # ── German reply header stripping ─────────────────────────────
 
+
 class TestCleanBodyGermanReplyHeaders:
     def test_clean_body_strips_german_reply_header_tail_before_persistence(self):
         email = Email(
@@ -548,8 +548,8 @@ class TestCleanBodyGermanReplyHeaders:
         assert "Von: Alice <employee@example.test>" in email.clean_body
 
 
-
 # ── Non-English reply header stripping (PT, PL) ──────────────
+
 
 class TestCleanBodyNonEnglishReplyHeaders:
     def test_clean_body_strips_portuguese_reply_header_tail_before_persistence(self):

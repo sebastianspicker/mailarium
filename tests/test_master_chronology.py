@@ -81,10 +81,6 @@ _CHRONOLOGY_SOURCE_LINKAGE_FINDINGS = {
 }
 
 
-
-
-
-
 def _assert_chronology_basics(payload):
     assert payload["entry_count"] == 3
     assert payload["primary_entry_count"] == 2
@@ -144,6 +140,7 @@ def _assert_source_linkage(payload):
     assert fallback_entry["source_linkage"]["source_ids"] == ["email:uid-9"]
     assert fallback_entry["source_linkage"]["evidence_handles"] == ["email:uid-9"]
     assert payload["summary"]["event_read_status_counts"]["ordinary_managerial_explanation:plausible_alternative"] == 2
+
 
 def test_build_master_chronology_adds_source_linkage_and_date_precision() -> None:
     payload = build_master_chronology(

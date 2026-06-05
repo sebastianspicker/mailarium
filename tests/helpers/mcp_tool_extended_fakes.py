@@ -202,6 +202,8 @@ class MockEmailDB:
             self.close()
         except Exception:  # pylint: disable=broad-exception-caught
             pass
+
+
 class MockDeps:
     """Dependency injection for tool modules matching ToolDepsProto."""
 

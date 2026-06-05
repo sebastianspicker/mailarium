@@ -1,8 +1,6 @@
 """Coverage-ledger helpers for case-analysis payloads."""
 # pylint: disable=too-many-arguments,too-many-locals
 
-
-
 from __future__ import annotations
 
 from typing import Any

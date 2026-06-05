@@ -1,8 +1,6 @@
 """Conversation segmentation for email bodies."""
 # pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
 
-
-
 from __future__ import annotations
 
 import re

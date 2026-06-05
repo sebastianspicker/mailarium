@@ -1,8 +1,6 @@
 """Schema migration helpers for the email SQLite database."""
 # pylint: disable=too-many-branches,too-many-statements
 
-
-
 from __future__ import annotations
 
 import logging
@@ -15,8 +13,12 @@ from ._sql_validation import validate_sql_identifier as _validate_sql_identifier
 logger = logging.getLogger(__name__)
 
 _KNOWN_TABLES = {
-    "emails", "ingestion_runs", "evidence_items", "attachments",
-    "entity_mentions", "message_segments",
+    "emails",
+    "ingestion_runs",
+    "evidence_items",
+    "attachments",
+    "entity_mentions",
+    "message_segments",
 }
 _COLUMN_TYPE_RE = re.compile(
     r"^(TEXT|INTEGER|REAL|BLOB)"

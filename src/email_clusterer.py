@@ -1,8 +1,6 @@
 """KMeans clustering for email archives using pre-computed embeddings."""
 # pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
 
-
-
 from __future__ import annotations
 
 import logging

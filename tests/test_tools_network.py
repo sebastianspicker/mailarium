@@ -52,6 +52,8 @@ class MockEmailDB:
             self.close()
         except Exception:  # pylint: disable=broad-exception-caught
             pass
+
+
 class MockCommunicationNetwork:
     """Stub for CommunicationNetwork used by run_with_network."""
 

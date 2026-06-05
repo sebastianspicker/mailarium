@@ -1,8 +1,6 @@
 """Stable projection helpers for realistic legal-support acceptance outputs."""
 # pylint: disable=too-many-locals
 
-
-
 from __future__ import annotations
 
 import json

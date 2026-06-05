@@ -1,8 +1,6 @@
 """Helpers for evaluating answer-context quality against labeled questions."""
 # pylint: disable=too-many-locals
 
-
-
 from __future__ import annotations
 
 import asyncio

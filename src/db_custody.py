@@ -1,8 +1,6 @@
 """Chain-of-custody and ingestion tracking mixin for EmailDatabase."""
 # pylint: disable=too-many-arguments,too-many-positional-arguments
 
-
-
 from __future__ import annotations
 
 import hashlib

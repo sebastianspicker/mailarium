@@ -22,7 +22,6 @@ from ._archive_harvest_bundle_cases import (
     SINGLE_BODY_EVIDENCE_BANK,
     SINGLE_RESULT_EVIDENCE_BANK,
     SPARSE_EVIDENCE_BANK,
-    WIDE_LANE_DIAGNOSTICS,
 )
 from ._case_analysis_integration_cases import *
 from .helpers.case_analysis_fixtures import case_payload as _case_payload

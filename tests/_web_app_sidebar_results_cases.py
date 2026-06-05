@@ -16,9 +16,8 @@ from src.retriever import SearchResult
 from .helpers.web_app_fixtures import _columns_side_effect, _result, _setup_evidence_st, _setup_main_search_st
 
 
-
-
 # ── Shared setup helper ────────────────────────────────────────
+
 
 def _setup_render_results_st(mock_st):
     mock_st.expander.return_value.__enter__ = MagicMock(return_value=MagicMock())
@@ -115,9 +114,8 @@ class TestRenderSidebar:
         assert any("anon@example.com" in c for c in markdown_calls)
 
 
-
-
 # ── Basic rendering ──────────────────────────────────────────────
+
 
 class TestRenderResultsBasic:
     @patch("src.web_app.st")
@@ -160,9 +158,8 @@ class TestRenderResultsBasic:
         assert any("score-badge" in c for c in markdown_calls)
 
 
-
-
 # ── Body display / expanders ──────────────────────────────────
+
 
 class TestRenderResultsBodyDisplay:
     @patch("src.web_app.st")
@@ -182,8 +179,8 @@ class TestRenderResultsBodyDisplay:
         assert mock_st.expander.call_count == 1
 
 
-
 # ── Recipient handling ────────────────────────────────────────
+
 
 class TestRenderResultsRecipients:
     @patch("src.web_app.st")
@@ -214,8 +211,8 @@ class TestRenderResultsRecipients:
         render_results([_result(to="a@example.test, b@example.test, c@example.test")], preview_chars=200)
 
 
-
 # ── Type / attachment / priority badges ───────────────────────
+
 
 class TestRenderResultsBadges:
     @patch("src.web_app.st")
@@ -298,8 +295,8 @@ class TestRenderResultsBadges:
         assert not any("Priority:" in c for c in caption_calls)
 
 
-
 # ── Thread / conversation view ─────────────────────────────────
+
 
 class TestRenderResultsThread:
     @patch("src.web_app.st")
@@ -372,6 +369,7 @@ class TestRenderResultsThread:
         )
         assert mock_st.session_state.get("web_thread_id") == "conv_click"
         mock_st.rerun.assert_called()
+
 
 class TestRenderResultsSummary:
     @patch("src.web_app.st")

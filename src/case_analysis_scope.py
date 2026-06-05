@@ -1,8 +1,6 @@
 """Scope and classification helpers for case-analysis payloads."""
 # pylint: disable=too-many-locals,too-many-return-statements
 
-
-
 from __future__ import annotations
 
 from typing import Any

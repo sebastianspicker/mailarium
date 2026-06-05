@@ -1,8 +1,6 @@
 """Deterministic intake extraction from supplied matter materials."""
 # pylint: disable=too-many-arguments
 
-
-
 from __future__ import annotations
 
 import re

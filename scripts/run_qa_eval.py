@@ -134,7 +134,7 @@ def _interpreter_has_module(module_name: str) -> bool:
 def _run_project_reexec(command: list[str]) -> subprocess.CompletedProcess[bytes]:
     if len(command) < 2 or Path(command[1]).resolve() != Path(__file__).resolve():
         raise ValueError("QA eval re-exec must target this script")
-    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use.dangerous-subprocess-use
+    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
         command,
         cwd=ROOT,
         check=False,

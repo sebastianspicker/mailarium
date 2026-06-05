@@ -38,8 +38,12 @@ class TestEvidenceAdd:
         class FailDB(MockDeps._email_db.__class__):
             def add_evidence(  # pylint: disable=too-many-arguments,too-many-positional-arguments
                 self,
-                email_uid=None, category=None, key_quote=None,
-                summary=None, relevance=None, notes="",
+                email_uid=None,
+                category=None,
+                key_quote=None,
+                summary=None,
+                relevance=None,
+                notes="",
                 **_unused,
             ):
                 raise ValueError("Quote not found in email body")
@@ -119,8 +123,12 @@ class TestEvidenceAddBatch:
         class PartialFailDB(MockDeps._email_db.__class__):
             def add_evidence(  # pylint: disable=too-many-arguments,too-many-positional-arguments
                 self,
-                email_uid=None, category=None, key_quote=None,
-                summary=None, relevance=None, notes="",
+                email_uid=None,
+                category=None,
+                key_quote=None,
+                summary=None,
+                relevance=None,
+                notes="",
                 **kwargs,
             ):
                 call_count[0] += 1

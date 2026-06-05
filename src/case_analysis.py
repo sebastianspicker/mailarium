@@ -1,8 +1,6 @@
 """Dedicated workplace case-analysis wrapper over the answer-context pipeline."""
 # pylint: disable=too-many-branches,too-many-locals,too-many-statements
 
-
-
 from __future__ import annotations
 
 import json

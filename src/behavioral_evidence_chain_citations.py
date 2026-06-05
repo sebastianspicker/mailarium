@@ -1,8 +1,6 @@
 """Citation builders for behavioural evidence chains."""
 # pylint: disable=too-many-arguments,too-many-locals
 
-
-
 from __future__ import annotations
 
 from typing import Any

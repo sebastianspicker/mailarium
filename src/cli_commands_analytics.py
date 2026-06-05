@@ -1,8 +1,6 @@
 """Analytics command-family implementations for the CLI."""
 # pylint: disable=too-many-locals
 
-
-
 from __future__ import annotations
 
 from collections.abc import Callable

@@ -1,8 +1,6 @@
 """Persisted matter workspace and snapshot helpers for EmailDatabase."""
 # pylint: disable=too-many-arguments,too-many-positional-arguments
 
-
-
 from __future__ import annotations
 
 import json

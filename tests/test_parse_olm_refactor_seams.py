@@ -1,8 +1,6 @@
 """Structural seam tests for the R7 parse_olm refactor."""
 # pylint: disable=no-member,c-extension-no-member
 
-
-
 from __future__ import annotations
 
 import logging

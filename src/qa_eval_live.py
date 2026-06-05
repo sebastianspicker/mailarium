@@ -1,8 +1,6 @@
 """Live QA-eval dependency resolution and SQLite fallback retrieval."""
 # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements
 
-
-
 from __future__ import annotations
 
 import asyncio

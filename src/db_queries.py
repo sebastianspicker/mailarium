@@ -1,8 +1,6 @@
 """Query mixin for EmailDatabase: read operations, full-body retrieval, browsing."""
 # pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments,too-many-public-methods
 
-
-
 from __future__ import annotations
 
 import re

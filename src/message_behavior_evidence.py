@@ -1,8 +1,6 @@
 """Evidence and candidate helpers for message-level behaviour analysis."""
 # pylint: disable=too-many-arguments
 
-
-
 from __future__ import annotations
 
 import re

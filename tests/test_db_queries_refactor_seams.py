@@ -19,6 +19,8 @@ class _QueryHarness(QueryMixin):
             self.close()
         except Exception:  # pylint: disable=broad-exception-caught
             pass
+
+
 def test_query_mixin_browse_family_delegates_to_extracted_helpers(monkeypatch):
     db = _QueryHarness()
     calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []

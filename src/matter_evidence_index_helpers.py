@@ -1,8 +1,6 @@
 """Helper functions for the matter evidence index."""
 # pylint: disable=too-many-branches,too-many-locals,too-many-return-statements,redefined-outer-name
 
-
-
 from __future__ import annotations
 
 import re

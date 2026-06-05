@@ -1,8 +1,6 @@
 """Persistence helpers for EmailDatabase write paths."""
 # pylint: disable=too-many-branches,too-many-locals
 
-
-
 from __future__ import annotations
 
 import json

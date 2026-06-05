@@ -1,8 +1,6 @@
 """Threshold profiles for QA eval report gating."""
 # pylint: disable=too-many-branches,too-many-locals,too-many-return-statements
 
-
-
 from __future__ import annotations
 
 from typing import Any

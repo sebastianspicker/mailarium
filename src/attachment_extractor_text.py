@@ -1,8 +1,6 @@
 """Attachment text and image embedding extraction helpers."""
 # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-positional-arguments,too-many-return-statements
 
-
-
 from __future__ import annotations
 
 import email

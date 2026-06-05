@@ -1,8 +1,6 @@
 """Employment-issue and chronology helpers for investigation reports."""
 # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements,redefined-outer-name
 
-
-
 from __future__ import annotations
 
 from typing import Any

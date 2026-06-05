@@ -1,8 +1,6 @@
 """Embedding/write pipeline helpers extracted from ``src.ingest``."""
 # pylint: disable=too-many-arguments,too-many-branches,too-many-instance-attributes,too-many-locals,too-many-nested-blocks,too-many-positional-arguments,too-many-statements
 
-
-
 from __future__ import annotations
 
 import logging

@@ -1,8 +1,6 @@
 """Evidence management, chain of custody, and proof dossier MCP tools."""
 # pylint: disable=too-many-statements
 
-
-
 from __future__ import annotations
 
 import logging

@@ -1,8 +1,6 @@
 """Gap and conflict analysis helpers for chronology assembly."""
 # pylint: disable=too-many-locals
 
-
-
 from __future__ import annotations
 
 from itertools import pairwise

@@ -1,8 +1,6 @@
 """Writing style and readability analysis for emails."""
 # pylint: disable=too-many-instance-attributes,too-many-locals
 
-
-
 from __future__ import annotations
 
 import logging

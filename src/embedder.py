@@ -1,8 +1,6 @@
 """Embedding and ChromaDB storage."""
 # pylint: disable=too-many-branches,too-many-instance-attributes,too-many-locals,too-many-statements
 
-
-
 from __future__ import annotations
 
 import logging

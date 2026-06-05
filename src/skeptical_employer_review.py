@@ -1,8 +1,6 @@
 """Employer-side skeptical review with paired repair guidance."""
 # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements
 
-
-
 from __future__ import annotations
 
 from typing import Any

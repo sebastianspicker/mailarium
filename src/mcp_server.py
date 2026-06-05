@@ -221,7 +221,7 @@ def _runtime_path_override_changed(path: str | None, *, field_name: str, current
 
 
 def _reset_runtime_clients() -> None:
-    global _email_db, _retriever, _runtime_chromadb_path, _runtime_sqlite_path  # pylint: disable=used-before-assignment,global-statement
+    global _email_db, _retriever  # pylint: disable=used-before-assignment,global-statement
     with _retriever_lock:
         _retriever = None
     old_email_db = None

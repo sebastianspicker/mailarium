@@ -1,8 +1,6 @@
 """Embedding-based query expansion for improved recall."""
 # pylint: disable=too-many-branches,too-many-locals,too-many-return-statements
 
-
-
 from __future__ import annotations
 
 import logging

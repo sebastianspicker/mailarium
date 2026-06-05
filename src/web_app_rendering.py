@@ -1,8 +1,6 @@
 """Rendering helpers for the Streamlit email browser."""
 # pylint: disable=too-many-arguments,too-many-locals,too-many-statements
 
-
-
 from __future__ import annotations
 
 from typing import Any

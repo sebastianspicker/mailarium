@@ -1,8 +1,6 @@
 """End-to-end ingestion pipeline."""
 # pylint: disable=too-many-arguments,too-many-branches,too-many-positional-arguments,too-many-statements
 
-
-
 from __future__ import annotations
 
 import argparse

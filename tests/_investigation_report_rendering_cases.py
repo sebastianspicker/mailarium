@@ -163,9 +163,7 @@ _SAMPLE_FINDING_EVIDENCE_INDEX = {
                     "label": "medium",
                 }
             },
-            "alternative_explanations": [
-                "The pattern may reflect repeated process friction rather than targeted hostility."
-            ],
+            "alternative_explanations": ["The pattern may reflect repeated process friction rather than targeted hostility."],
         }
     ]
 }
@@ -192,8 +190,7 @@ _SAMPLE_MULTI_SOURCE_CASE_BUNDLE = {
             "title": "Status",
             "date": "2026-02-12T10:00:00",
             "snippet": (
-                "Wir haben die SBV in diesem Schritt nicht beteiligt und "
-                "senden vorerst keine schriftliche Zusammenfassung."
+                "Wir haben die SBV in diesem Schritt nicht beteiligt und senden vorerst keine schriftliche Zusammenfassung."
             ),
             "provenance": {"evidence_handle": "email:uid-1"},
             "source_reliability": {"level": "high", "basis": "authored_email_body"},
@@ -214,8 +211,6 @@ _SAMPLE_MULTI_SOURCE_CASE_BUNDLE = {
     ],
     "source_links": [],
 }
-
-
 
 
 def _assert_report_top_level(report):
@@ -439,7 +434,6 @@ def test_build_investigation_report_renders_supported_sections_with_evidence_lin
     _assert_skeptical_and_checklists(report)
     _assert_chronology(report)
     _assert_language_and_overall(report)
-
 
 
 def test_build_investigation_report_marks_sections_insufficient_when_no_evidence():

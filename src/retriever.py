@@ -1,8 +1,6 @@
 """Retrieval logic for searching and inspecting the email vector database."""
 # pylint: disable=too-many-arguments,too-many-instance-attributes,too-many-locals,too-many-positional-arguments
 
-
-
 from __future__ import annotations
 
 import collections

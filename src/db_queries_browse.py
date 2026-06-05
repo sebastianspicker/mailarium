@@ -235,6 +235,12 @@ BROWSE_FROM_WHERE_SQL = (
     " AND (? IS NULL OR SUBSTR(date, 1, 10) >= ?)"
     " AND (? IS NULL OR SUBSTR(date, 1, 10) <= ?)"
 )
+BROWSE_COUNT_SQL = "SELECT COUNT(DISTINCT emails.uid) AS c" + BROWSE_FROM_WHERE_SQL
+BROWSE_SELECT_BASE_SQL = (
+    "SELECT DISTINCT emails.uid, subject, sender_name, sender_email, date, folder,"
+    " email_type, has_attachments, attachment_count, body_length,"
+    " conversation_id" + BROWSE_FROM_WHERE_SQL
+)
 
 
 def list_emails_paginated_impl(
@@ -268,19 +274,16 @@ def list_emails_paginated_impl(
         date_from=date_from,
         date_to=date_to,
     )
-    total_row = db.conn.execute("SELECT COUNT(DISTINCT emails.uid) AS c" + BROWSE_FROM_WHERE_SQL, params).fetchone()
+    # Safe: static query with bound filter parameters.
+    total_row = db.conn.execute(  # nosemgrep
+        BROWSE_COUNT_SQL,
+        params,
+    ).fetchone()
     total = total_row["c"]
 
-    rows = db.conn.execute(
-        # B608 — validated sort column/direction, bound params.
-        (
-            "SELECT DISTINCT emails.uid, subject, sender_name, sender_email, date, folder,"
-            " email_type, has_attachments, attachment_count, body_length,"
-            " conversation_id"
-            + BROWSE_FROM_WHERE_SQL
-            + f" ORDER BY {sort_by} {sort_order}"
-            " LIMIT ? OFFSET ?"
-        ),
+    # Safe: validated sort column/direction, static filters, bound params.
+    rows = db.conn.execute(  # nosemgrep
+        f"{BROWSE_SELECT_BASE_SQL} ORDER BY {sort_by} {sort_order} LIMIT ? OFFSET ?",
         [*params, limit, offset],
     ).fetchall()
 

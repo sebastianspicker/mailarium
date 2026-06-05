@@ -1,8 +1,6 @@
 """Classification and deterministic fallback for empty normalized bodies."""
 # pylint: disable=too-many-arguments,too-many-boolean-expressions,too-many-branches,too-many-locals,too-many-positional-arguments,too-many-return-statements
 
-
-
 from __future__ import annotations
 
 from dataclasses import dataclass

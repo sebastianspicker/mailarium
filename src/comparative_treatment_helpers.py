@@ -1,8 +1,6 @@
 """Helper functions for comparative-treatment analysis."""
 # pylint: disable=too-many-boolean-expressions,too-many-branches,too-many-locals
 
-
-
 from __future__ import annotations
 
 import re

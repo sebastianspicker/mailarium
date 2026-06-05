@@ -12,7 +12,7 @@ def _run_repo_contract_command(command: list[str]) -> subprocess.CompletedProces
         raise ValueError("empty command")
     if command[0] not in {"git", sys.executable}:
         raise ValueError(f"unsupported repo-contract command: {command[0]!r}")
-    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use.dangerous-subprocess-use
+    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
         command,
         check=True,
         capture_output=True,

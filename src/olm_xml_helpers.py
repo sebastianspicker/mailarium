@@ -8,7 +8,6 @@ Extracted from ``parse_olm.py`` to keep each module under 500 lines.
 """
 # pylint: disable=c-extension-no-member
 
-
 from __future__ import annotations
 
 # pylint: disable=no-member

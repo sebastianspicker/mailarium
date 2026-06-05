@@ -174,7 +174,6 @@ def test_sqlite_live_retriever_uses_attachment_text_preview_in_result_text(tmp_p
     assert "Budget Q4 total: 25000 EUR" in attachment_results[0].text
 
 
-
 def _setup_attachment_db(tmp_path: Path) -> tuple:
     from src.email_db import EmailDatabase
 
@@ -201,6 +200,7 @@ def _setup_attachment_db(tmp_path: Path) -> tuple:
     ]
     db.insert_email(email)
     return db, email
+
 
 def test_live_payload_preserves_strong_attachment_text_with_sqlite_preview(tmp_path: Path, monkeypatch):
     from src.config import get_settings

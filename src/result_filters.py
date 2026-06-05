@@ -1,8 +1,6 @@
 """Pure-function metadata filters and utilities extracted from retriever.py."""
 # pylint: disable=too-many-arguments,too-many-locals
 
-
-
 from __future__ import annotations
 
 import math
