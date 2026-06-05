@@ -201,6 +201,42 @@ def get_inferred_thread_emails_impl(db: Any, inferred_thread_id: str) -> list[di
     )
 
 
+def _browse_filter_params(
+    *,
+    category: str | None,
+    folder: str | None,
+    sender: str | None,
+    date_from: str | None,
+    date_to: str | None,
+) -> list[Any]:
+    sender_like = f"%{_escape_like(sender)}%" if sender else None
+    start_date = date_from[:10] if date_from else None
+    end_date = date_to[:10] if date_to else None
+    return [
+        category,
+        category,
+        folder,
+        folder,
+        sender_like,
+        sender_like,
+        start_date,
+        start_date,
+        end_date,
+        end_date,
+    ]
+
+
+BROWSE_FROM_WHERE_SQL = (
+    " FROM emails"
+    " LEFT JOIN email_categories ec ON emails.uid = ec.email_uid"
+    " WHERE (? IS NULL OR ec.category = ?)"
+    " AND (? IS NULL OR folder = ?)"
+    " AND (? IS NULL OR sender_email LIKE ? ESCAPE '\\')"
+    " AND (? IS NULL OR SUBSTR(date, 1, 10) >= ?)"
+    " AND (? IS NULL OR SUBSTR(date, 1, 10) <= ?)"
+)
+
+
 def list_emails_paginated_impl(
     db: Any,
     *,
@@ -225,39 +261,26 @@ def list_emails_paginated_impl(
     if limit < 1:
         limit = 1
 
-    join = ""
-    conditions = []
-    params: list[Any] = []
-    if category:
-        join = " JOIN email_categories ec ON emails.uid = ec.email_uid"
-        conditions.append("ec.category = ?")
-        params.append(category)
-    if folder:
-        conditions.append("folder = ?")
-        params.append(folder)
-    if sender:
-        conditions.append("sender_email LIKE ? ESCAPE '\\'")
-        params.append(f"%{_escape_like(sender)}%")
-    if date_from:
-        conditions.append("SUBSTR(date, 1, 10) >= ?")
-        params.append(date_from[:10])
-    if date_to:
-        conditions.append("SUBSTR(date, 1, 10) <= ?")
-        params.append(date_to[:10])
-
-    where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
-
-    total_row = db.conn.execute(f"SELECT COUNT(*) AS c FROM emails{join}{where}", params).fetchone()
+    params = _browse_filter_params(
+        category=category,
+        folder=folder,
+        sender=sender,
+        date_from=date_from,
+        date_to=date_to,
+    )
+    total_row = db.conn.execute("SELECT COUNT(DISTINCT emails.uid) AS c" + BROWSE_FROM_WHERE_SQL, params).fetchone()
     total = total_row["c"]
 
     rows = db.conn.execute(
         # B608 — validated sort column/direction, bound params.
-        "SELECT emails.uid, subject, sender_name, sender_email, date, folder,"
-        " email_type, has_attachments, attachment_count, body_length,"
-        " conversation_id"
-        f" FROM emails{join}{where}"
-        f" ORDER BY {sort_by} {sort_order}"
-        " LIMIT ? OFFSET ?",
+        (
+            "SELECT DISTINCT emails.uid, subject, sender_name, sender_email, date, folder,"
+            " email_type, has_attachments, attachment_count, body_length,"
+            " conversation_id"
+            + BROWSE_FROM_WHERE_SQL
+            + f" ORDER BY {sort_by} {sort_order}"
+            " LIMIT ? OFFSET ?"
+        ),
         [*params, limit, offset],
     ).fetchall()
 

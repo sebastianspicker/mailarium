@@ -9,6 +9,16 @@ import pytest
 from .helpers.repo_contracts import REPO_ROOT, _is_tracked, _read
 
 
+def _run_privacy_scan() -> subprocess.CompletedProcess[str]:
+    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use.dangerous-subprocess-use
+        [sys.executable, "scripts/privacy_scan.py", "--tracked-only", "--json"],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
 def test_security_policy_tracks_dev_branch_and_private_reporting():
     security = _read("SECURITY.md")
 
@@ -93,13 +103,7 @@ def test_internal_operator_workspace_artifacts_are_not_checked_in():
 
 
 def test_publication_surface_is_synthetic_and_private_artifact_free():
-    completed = subprocess.run(
-        [sys.executable, "scripts/privacy_scan.py", "--tracked-only", "--json"],
-        cwd=REPO_ROOT,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+    completed = _run_privacy_scan()
     assert completed.returncode == 0, completed.stdout
 
 

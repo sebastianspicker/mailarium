@@ -32,7 +32,7 @@ import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TextIO, cast
 
 from dotenv import load_dotenv
 
@@ -79,22 +79,21 @@ clear_settings_cache()
 
 # ── Instance lock ─────────────────────────────────────────────
 
-_lock_fd = None
+_lock_fd: TextIO | None = None  # module-level mutable singleton, not a constant
 
 
 def _acquire_instance_lock() -> None:
     """Acquire an exclusive file lock to prevent concurrent instances.
 
-    Uses ``fcntl.flock`` (Unix) with ``LOCK_EX | LOCK_NB``.  If ``fcntl`` is
-    unavailable, fail closed rather than starting without the single-instance
-    database-safety guard.
+    Uses ``fcntl.flock`` (Unix) with ``LOCK_EX | LOCK_NB``. On platforms where
+    ``fcntl`` is unavailable, log a warning and continue without locking.
     """
     global _lock_fd  # pylint: disable=global-statement
     try:
         import fcntl
     except ImportError:
-        logger.error("fcntl is not available; refusing to start MCP server without an instance lock.")
-        raise SystemExit(1) from None
+        logger.warning("fcntl is not available; continuing without an MCP instance lock.")
+        return
 
     _chromadb_path, sqlite_path = _resolved_runtime_paths()
     data_dir = Path(sqlite_path).parent
@@ -157,7 +156,7 @@ def _release_lock() -> None:
             _lock_fd.close()
         except OSError:
             logger.debug("Failed to close MCP server lock during shutdown", exc_info=True)
-_lock_fd: int | None = None  # pylint: disable=invalid-name  # module-level mutable singleton, not a constant
+        _lock_fd = None
 
 
 def _log_startup_info() -> None:
@@ -214,23 +213,15 @@ _runtime_chromadb_path: str | None = None
 _runtime_sqlite_path: str | None = None
 
 
-def set_runtime_archive_paths(*, chromadb_path: str | None = None, sqlite_path: str | None = None) -> None:  # pylint: disable=too-many-branches
-    """Persist runtime archive overrides for later read tools in this server process."""
-    global _email_db, _retriever, _runtime_chromadb_path, _runtime_sqlite_path  # pylint: disable=used-before-assignment,global-statement
-    changed = False
-    if chromadb_path is not None:
-        normalized_chromadb_path = str(validate_runtime_path(chromadb_path, field_name="chromadb_path"))
-        if normalized_chromadb_path != _runtime_chromadb_path:
-            _runtime_chromadb_path = normalized_chromadb_path
-            changed = True
-    if sqlite_path is not None:
-        normalized_sqlite_path = str(validate_runtime_path(sqlite_path, field_name="sqlite_path"))
-        if normalized_sqlite_path != _runtime_sqlite_path:
-            _runtime_sqlite_path = normalized_sqlite_path
-            changed = True
-    if not changed:
-        return
+def _runtime_path_override_changed(path: str | None, *, field_name: str, current: str | None) -> tuple[str | None, bool]:
+    if path is None:
+        return current, False
+    normalized = str(validate_runtime_path(path, field_name=field_name))
+    return normalized, normalized != current
 
+
+def _reset_runtime_clients() -> None:
+    global _email_db, _retriever, _runtime_chromadb_path, _runtime_sqlite_path  # pylint: disable=used-before-assignment,global-statement
     with _retriever_lock:
         _retriever = None
     old_email_db = None
@@ -243,6 +234,26 @@ def set_runtime_archive_paths(*, chromadb_path: str | None = None, sqlite_path: 
             close()  # pylint: disable=not-callable
         except OSError:
             pass
+
+
+def set_runtime_archive_paths(*, chromadb_path: str | None = None, sqlite_path: str | None = None) -> None:
+    """Persist runtime archive overrides for later read tools in this server process."""
+    global _runtime_chromadb_path, _runtime_sqlite_path  # pylint: disable=global-statement
+    new_chromadb_path, chromadb_changed = _runtime_path_override_changed(
+        chromadb_path,
+        field_name="chromadb_path",
+        current=_runtime_chromadb_path,
+    )
+    new_sqlite_path, sqlite_changed = _runtime_path_override_changed(
+        sqlite_path,
+        field_name="sqlite_path",
+        current=_runtime_sqlite_path,
+    )
+    if not (chromadb_changed or sqlite_changed):
+        return
+    _runtime_chromadb_path = new_chromadb_path
+    _runtime_sqlite_path = new_sqlite_path
+    _reset_runtime_clients()
 
 
 def _resolved_runtime_paths() -> tuple[str, str]:

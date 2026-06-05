@@ -7,17 +7,27 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _run_repo_contract_command(command: list[str]) -> subprocess.CompletedProcess[str]:
+    if not command:
+        raise ValueError("empty command")
+    if command[0] not in {"git", sys.executable}:
+        raise ValueError(f"unsupported repo-contract command: {command[0]!r}")
+    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use.dangerous-subprocess-use
+        command,
+        check=True,
+        capture_output=True,
+        cwd=REPO_ROOT,
+        text=True,
+    )
+
+
 def _read(relative_path: str) -> str:
     return (REPO_ROOT / relative_path).read_text(encoding="utf-8")
 
 
 def _git_ls(relative_path: str) -> list[str]:
-    completed = subprocess.run(
+    completed = _run_repo_contract_command(
         ["git", "ls-files", "--", relative_path],
-        check=True,
-        capture_output=True,
-        cwd=REPO_ROOT,
-        text=True,
     )
     return [line.strip() for line in completed.stdout.splitlines() if line.strip()]
 
@@ -27,7 +37,7 @@ def _is_tracked(relative_path: str) -> bool:
 
 
 def _mcp_tool_count() -> int:
-    completed = subprocess.run(
+    completed = _run_repo_contract_command(
         [
             sys.executable,
             "-c",
@@ -42,9 +52,5 @@ def _mcp_tool_count() -> int:
                 "print(len(tools))"
             ),
         ],
-        check=True,
-        capture_output=True,
-        cwd=REPO_ROOT,
-        text=True,
     )
     return int(completed.stdout.strip())

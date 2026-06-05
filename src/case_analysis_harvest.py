@@ -1,5 +1,5 @@
 # mypy: disable-error-code=name-defined
-# ruff: noqa: I001, F401, RUF022
+# ruff: noqa: I001, RUF022
 """Compatibility facade for split archive-harvest helpers."""
 
 from __future__ import annotations
@@ -52,7 +52,6 @@ from .case_analysis_harvest_quality import (
 )
 from .case_analysis_harvest_expansion import (
     _attachment_expansion_rows,
-    _augment_event_occurrences,
     _enrich_evidence_bank,
     _thread_expansion_rows,
 )
@@ -98,7 +97,7 @@ def _sync_patchable_harvest_globals() -> None:
         module.__dict__.update({key: value for key, value in patchable.items() if value is not None})
 
 
-async def build_archive_harvest_bundle(*args, **kwargs):  # type: ignore[no-redef]
+async def build_archive_harvest_bundle(*args, **kwargs):
     """Run a wider archive-harvest pass before compact wave synthesis."""
     _sync_patchable_harvest_globals()
     return await _build_archive_harvest_bundle_impl(*args, **kwargs)  # pylint: disable=missing-kwoa

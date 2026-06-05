@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 # isort: off
@@ -25,36 +26,39 @@ from .search_answer_context_runtime_ranking import (
 # isort: on
 
 
+@dataclass(slots=True)
+class LaneDiagnosticsInput:
+    lane_id: str
+    query: str
+    executed_query: str
+    results: list[Any]
+    scan_id: str | None
+    scan_meta: dict[str, Any] | None
+    lane_search_top_k: int
+    expansion_terms: list[str]
+    debug: dict[str, Any]
+    segment_diag: dict[str, Any]
+
+
 def _apply_filter_seen(scan_id: str | None, results: list[Any]) -> tuple[list[Any], dict[str, Any] | None]:
     if scan_id:
         return filter_seen(scan_id, results)
     return results, None
 
 
-def _build_lane_diagnostics_item(
-    lane_id: str,
-    query: str,
-    executed_query: str,
-    results: list[Any],
-    scan_id: str | None,
-    scan_meta: dict[str, Any] | None,
-    lane_search_top_k: int,
-    expansion_terms: list[str],
-    debug: dict[str, Any],
-    segment_diag: dict[str, Any],
-) -> dict[str, Any]:
+def _build_lane_diagnostics_item(context: LaneDiagnosticsInput) -> dict[str, Any]:
     item: dict[str, Any] = {
-        "lane_id": lane_id,
-        "query": query,
-        "executed_query": executed_query,
-        "result_count": len(results),
-        "used_query_expansion": bool(debug.get("used_query_expansion")),
-        "scan_id": scan_id or "",
-        "excluded_count": int((scan_meta or {}).get("excluded_count") or 0),
-        "search_top_k": lane_search_top_k,
-        "expansion_terms": expansion_terms,
+        "lane_id": context.lane_id,
+        "query": context.query,
+        "executed_query": context.executed_query,
+        "result_count": len(context.results),
+        "used_query_expansion": bool(context.debug.get("used_query_expansion")),
+        "scan_id": context.scan_id or "",
+        "excluded_count": int((context.scan_meta or {}).get("excluded_count") or 0),
+        "search_top_k": context.lane_search_top_k,
+        "expansion_terms": context.expansion_terms,
     }
-    item.update(segment_diag)
+    item.update(context.segment_diag)
     return item
 
 
@@ -95,6 +99,106 @@ def _compute_support_type_counts(
     return counts
 
 
+def _single_lane_search_kwargs(search_kwargs: dict[str, Any], *, query: str, lane_search_top_k: int) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in {**search_kwargs, "query": query, "top_k": lane_search_top_k}.items()
+        if not str(key).startswith("_")
+    }
+
+
+def _merge_single_lane_results(results: list[Any], *, exact_wording: bool) -> dict[str, Any]:
+    combined_results: dict[str, Any] = {}
+    for result in results:
+        key = _result_identity_key(result, fallback="lane_1")
+        existing = combined_results.get(key)
+        if existing is None or _result_competition_key(result, exact_wording=exact_wording) > _result_competition_key(
+            existing,
+            exact_wording=exact_wording,
+        ):
+            combined_results[key] = result
+    return combined_results
+
+
+def _annotate_single_lane_results(ranked_results: list[tuple[str, Any]], *, query: str) -> dict[str, list[str]]:
+    for _key, result in ranked_results:
+        metadata = result.metadata if isinstance(result.metadata, dict) else {}
+        metadata["matched_query_lanes"] = ["lane_1"]
+        metadata["matched_query_queries"] = [query]
+    return {key: [query] for key, _result in ranked_results}
+
+
+def _single_lane_bank_keys(
+    *,
+    ranked_results: list[tuple[str, Any]],
+    lane_queries_by_key: dict[str, list[str]],
+    bank_limit: int,
+) -> list[str]:
+    bank_keys = _evidence_bank_keys_with_lane_diversity(
+        ranked=ranked_results,
+        lane_hits={key: ["lane_1"] for key, _result in ranked_results},
+        bank_limit=bank_limit,
+        reserve_per_lane=1,
+    )
+    return _evidence_bank_keys_with_support_diversity(
+        ranked=ranked_results,
+        selected_keys=bank_keys,
+        lane_queries_by_key=lane_queries_by_key,
+        bank_limit=bank_limit,
+    )
+
+
+def _single_lane_payload(
+    *,
+    ranked_results: list[tuple[str, Any]],
+    combined_results: dict[str, Any],
+    lane_queries_by_key: dict[str, list[str]],
+    bank_keys: list[str],
+    query: str,
+    expansion_terms: list[str],
+    recovered_terms: list[str],
+    recovered_key_count: int,
+    bank_limit: int,
+    lane_search_top_k: int,
+    top_k: int,
+) -> dict[str, Any]:
+    support_type_counts = _compute_support_type_counts(
+        bank_keys=bank_keys,
+        combined=combined_results,
+        lane_queries_by_key=lane_queries_by_key,
+    )
+    evidence_bank = _build_evidence_bank(
+        bank_keys=bank_keys,
+        combined=combined_results,
+        lane_hits={},
+        lane_queries_by_key=lane_queries_by_key,
+        is_single_lane=True,
+        single_query=query,
+    )
+    return {
+        "candidate_pool_count": len(ranked_results),
+        "selected_result_count": min(len(ranked_results), top_k),
+        "lane_top_k": lane_search_top_k,
+        "merge_budget": bank_limit,
+        "support_diversity": {
+            "selected_support_types": sorted(support_type_counts.keys()),
+            "counts_by_support_type": support_type_counts,
+        },
+        "expansion_attribution": [
+            {
+                "lane_id": "lane_1",
+                "query": query,
+                "new_key_count": len(ranked_results),
+                "expansion_terms": expansion_terms,
+                "recovered_expansion_terms": recovered_terms,
+                "recovered_expansion_key_count": recovered_key_count,
+            }
+        ],
+        "evidence_bank": evidence_bank[:bank_limit],
+        "evidence_results": [result for _key, result in ranked_results[:bank_limit]],
+    }
+
+
 def _search_single_lane(
     *,
     retriever: Any,
@@ -107,54 +211,45 @@ def _search_single_lane(
 ) -> tuple[list[Any], list[dict[str, Any]], dict[str, Any]]:
     lane_diagnostics: list[dict[str, Any]] = []
     exact_wording = bool(search_kwargs.get("_exact_wording_requested"))
+    query = query_lanes[0]
 
     results = retriever.search_filtered(
-        **{
-            key: value
-            for key, value in {**search_kwargs, "query": query_lanes[0], "top_k": lane_search_top_k}.items()
-            if not str(key).startswith("_")
-        }
+        **_single_lane_search_kwargs(search_kwargs, query=query, lane_search_top_k=lane_search_top_k)
     )
     scan_meta: dict[str, Any] | None = None
     results, scan_meta = _apply_filter_seen(scan_id, results)
     debug = dict(getattr(retriever, "last_search_debug", getattr(retriever, "_last_search_debug", None)) or {})
-    executed_query = str(debug.get("executed_query") or query_lanes[0])
+    executed_query = str(debug.get("executed_query") or query)
     expansion_terms = _lane_expansion_terms(
-        base_query=query_lanes[0],
-        lane_query=query_lanes[0],
+        base_query=query,
+        lane_query=query,
         executed_query=executed_query,
         query_expansion_suffix=str(debug.get("query_expansion_suffix") or ""),
     )
     segment_results, segment_diag = _segment_search_results(
         retriever=retriever,
-        lane_query=query_lanes[0],
+        lane_query=query,
         lane_id="lane_1",
         limit=max(4, min(bank_limit, lane_search_top_k // 2 or 4)),
         scan_id=scan_id,
     )
     lane_diagnostics.append(
         _build_lane_diagnostics_item(
-            lane_id="lane_1",
-            query=query_lanes[0],
-            executed_query=executed_query,
-            results=results,
-            scan_id=scan_id,
-            scan_meta=scan_meta,
-            lane_search_top_k=lane_search_top_k,
-            expansion_terms=expansion_terms,
-            debug=debug,
-            segment_diag=segment_diag,
+            LaneDiagnosticsInput(
+                lane_id="lane_1",
+                query=query,
+                executed_query=executed_query,
+                results=results,
+                scan_id=scan_id,
+                scan_meta=scan_meta,
+                lane_search_top_k=lane_search_top_k,
+                expansion_terms=expansion_terms,
+                debug=debug,
+                segment_diag=segment_diag,
+            )
         )
     )
-    combined_results: dict[str, Any] = {}
-    for result in [*results, *segment_results]:
-        key = _result_identity_key(result, fallback="lane_1")
-        existing = combined_results.get(key)
-        if existing is None or _result_competition_key(result, exact_wording=exact_wording) > _result_competition_key(
-            existing,
-            exact_wording=exact_wording,
-        ):
-            combined_results[key] = result
+    combined_results = _merge_single_lane_results([*results, *segment_results], exact_wording=exact_wording)
     return _assemble_single_lane_results(
         combined_results=combined_results,
         exact_wording=exact_wording,
@@ -191,65 +286,34 @@ def _assemble_single_lane_results(
     )
     lane_diagnostics[0]["recovered_expansion_terms"] = recovered_terms
     lane_diagnostics[0]["recovered_expansion_key_count"] = recovered_key_count
-    for _key, result in ranked_results:
-        metadata = result.metadata if isinstance(result.metadata, dict) else {}
-        metadata["matched_query_lanes"] = ["lane_1"]
-        metadata["matched_query_queries"] = [query_lanes[0]]
-    lane_queries_by_key = {key: [query_lanes[0]] for key, _result in ranked_results}
-    bank_keys = _evidence_bank_keys_with_lane_diversity(
-        ranked=ranked_results,
-        lane_hits={key: ["lane_1"] for key, _result in ranked_results},
-        bank_limit=bank_limit,
-        reserve_per_lane=1,
-    )
-    bank_keys = _evidence_bank_keys_with_support_diversity(
-        ranked=ranked_results,
-        selected_keys=bank_keys,
+    query = query_lanes[0]
+    lane_queries_by_key = _annotate_single_lane_results(ranked_results, query=query)
+    bank_keys = _single_lane_bank_keys(
+        ranked_results=ranked_results,
         lane_queries_by_key=lane_queries_by_key,
         bank_limit=bank_limit,
-    )
-    evidence_bank = _build_evidence_bank(
-        bank_keys=bank_keys,
-        combined=combined_results,
-        lane_hits={},
-        lane_queries_by_key=lane_queries_by_key,
-        is_single_lane=True,
-        single_query=query_lanes[0],
-    )
-    support_type_counts = _compute_support_type_counts(
-        bank_keys=bank_keys,
-        combined=combined_results,
-        lane_queries_by_key=lane_queries_by_key,
     )
     return (
         [result for _key, result in ranked_results[:top_k]],
         lane_diagnostics,
-        {
-            "candidate_pool_count": len(ranked_results),
-            "selected_result_count": min(len(ranked_results), top_k),
-            "lane_top_k": lane_search_top_k,
-            "merge_budget": bank_limit,
-            "support_diversity": {
-                "selected_support_types": sorted(support_type_counts.keys()),
-                "counts_by_support_type": support_type_counts,
-            },
-            "expansion_attribution": [
-                {
-                    "lane_id": "lane_1",
-                    "query": query_lanes[0],
-                    "new_key_count": len(ranked_results),
-                    "expansion_terms": expansion_terms,
-                    "recovered_expansion_terms": recovered_terms,
-                    "recovered_expansion_key_count": recovered_key_count,
-                }
-            ],
-            "evidence_bank": evidence_bank[:bank_limit],
-            "evidence_results": [result for _key, result in ranked_results[:bank_limit]],
-        },
+        _single_lane_payload(
+            ranked_results=ranked_results,
+            combined_results=combined_results,
+            lane_queries_by_key=lane_queries_by_key,
+            bank_keys=bank_keys,
+            query=query,
+            expansion_terms=expansion_terms,
+            recovered_terms=recovered_terms,
+            recovered_key_count=recovered_key_count,
+            bank_limit=bank_limit,
+            lane_search_top_k=lane_search_top_k,
+            top_k=top_k,
+        ),
     )
 
 
 __all__ = [
+    "LaneDiagnosticsInput",
     "_apply_filter_seen",
     "_assemble_single_lane_results",
     "_build_evidence_bank",

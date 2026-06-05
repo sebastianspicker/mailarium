@@ -90,7 +90,7 @@ include = ["src*"]
 
 [tool.ruff]
 line-length = 130
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B", "SIM", "RUF", "C4", "PIE", "T20", "PLC", "PLE"]
@@ -168,7 +168,7 @@ disable = [
 ]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 files = ["src"]
 pretty = true
 show_error_codes = true

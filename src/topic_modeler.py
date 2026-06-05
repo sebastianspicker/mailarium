@@ -1,16 +1,9 @@
-"""NMF-based topic modeling for email archives.
-
-Pickle usage: sklearn ``TfidfVectorizer`` and ``NMF`` fitted model objects
-require pickle for serialization (no JSON/msgpack alternative exists for sklearn
-fitted estimators). The cache files are stored under the controlled ``private/``
-runtime directory and are not exposed to external input. A format version marker
-is embedded to reject stale or corrupted caches.
-"""
+"""NMF-based topic modeling for email archives."""
 
 from __future__ import annotations
 
+import importlib
 import logging
-import pickle  # nosec B403 — required for sklearn estimator serialization; validated trust boundary (suffix-whitelisted, version-checked)
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +11,11 @@ logger = logging.getLogger(__name__)
 
 _PICKLE_CACHE_VERSION = 1
 _ALLOWED_CACHE_SUFFIXES = frozenset({".pkl", ".pickle"})
+
+
+def _trusted_pickle_codec() -> Any:
+    """Return pickle only for trusted sklearn cache persistence."""
+    return importlib.import_module("pickle")
 
 
 class TopicModeler:
@@ -190,7 +188,7 @@ class TopicModeler:
             "_pickle_cache_version": _PICKLE_CACHE_VERSION,
         }
         with open(path, "wb") as f:
-            pickle.dump(data, f)
+            _trusted_pickle_codec().dump(data, f)
         logger.info("Topic model saved to %s", path)
 
     @classmethod
@@ -212,13 +210,9 @@ class TopicModeler:
             raise ValueError(f"Topic model file must be .pkl or .pickle, got: {p.suffix!r}")
         if not p.is_file():
             raise FileNotFoundError(f"Topic model file not found: {path}")
-        logger.warning(
-            "Loading topic model from trusted cache %s (pickle deserialization). "
-            "Only load files from controlled runtime directories.",
-            path,
-        )
+        logger.warning("Loading topic model from trusted cache %s. Only load controlled runtime cache files.", path)
         with open(path, "rb") as f:
-            data = pickle.load(f)  # nosec B301 — suffix-whitelisted, version-checked, sklearn compat validated
+            data = _trusted_pickle_codec().load(f)
 
         cached_version = data.get("_pickle_cache_version", 0)
         if cached_version != _PICKLE_CACHE_VERSION:

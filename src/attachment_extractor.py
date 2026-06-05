@@ -42,6 +42,19 @@ from .image_embedder import _IMAGE_EXTENSIONS
 _image_embedder = None
 
 
+def _run_ocr_process(command: list[str], *, timeout_seconds: int) -> subprocess.CompletedProcess[str]:
+    executable = Path(command[0]).name if command else ""
+    if executable not in {"tesseract", "pdftoppm"}:
+        raise ValueError(f"Unsupported OCR executable: {executable!r}")
+    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use.dangerous-subprocess-use
+        command,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=timeout_seconds,
+    )
+
+
 def _get_image_embedder():
     global _image_embedder  # pylint: disable=global-statement
     if _image_embedder is None:
@@ -162,13 +175,7 @@ def extract_image_text_ocr(filename: str, content: bytes, *, timeout_seconds: in
             language_hint = DEFAULT_ATTACHMENT_OCR_LANG
         if language_hint:
             command.extend(["-l", language_hint])
-        result = subprocess.run(
-            command,
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=timeout_seconds,
-        )
+        result = _run_ocr_process(command, timeout_seconds=timeout_seconds)
         if result.returncode != 0:
             return None
         text = _truncate(str(result.stdout or "").strip())
@@ -204,12 +211,9 @@ def extract_pdf_text_ocr(filename: str, content: bytes, *, timeout_seconds: int 
         except (ValueError, TypeError):
             max_pages_val = 5
         max_pages = max(1, max_pages_val)
-        render = subprocess.run(
+        render = _run_ocr_process(
             [pdftoppm_path, "-f", "1", "-l", str(max_pages), "-png", temp_pdf, output_prefix],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=timeout_seconds,
+            timeout_seconds=timeout_seconds,
         )
         if render.returncode != 0:
             return None

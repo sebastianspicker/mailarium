@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from .case_analysis_harvest_common import (
+    EnrichedRowIdentity,
     _build_enriched_row_identity,
     _compact,
 )
@@ -61,30 +62,32 @@ def _enrich_segment_candidate(
         entry,
         metadata,
         result,
-        snippet=impl._snippet(getattr(result, "text", "") or ""),
-        body_render_mode="segment",
-        body_render_source=_compact(metadata.get("body_render_source")) or "message_segments",
-        verification_status="segment_exact",
-        provenance={
-            "evidence_handle": (
-                f"segment:{uid}:{_compact(metadata.get('segment_type'))}:{int(metadata.get('segment_ordinal') or 0)}"
-            ),
-            "uid": uid,
-            "segment_type": _compact(metadata.get("segment_type")),
-            "segment_ordinal": int(metadata.get("segment_ordinal") or 0),
-            "body_render_source": _compact(metadata.get("body_render_source")) or "message_segments",
-        },
-        harvest_source="segment_search",
-        recipients_summary=recipients_summary,
-        speaker_attribution=speaker_attribution,
-        reply_context_from=reply_context_from,
-        reply_context_emails=reply_context_emails,
-        thread_locator=thread_locator,
-        email_language_source=segment_full_email or metadata,
-        extra_fields={
-            "segment_type": _compact(metadata.get("segment_type")),
-            "segment_ordinal": int(metadata.get("segment_ordinal") or 0),
-        },
+        identity=EnrichedRowIdentity(
+            snippet=impl._snippet(getattr(result, "text", "") or ""),
+            body_render_mode="segment",
+            body_render_source=_compact(metadata.get("body_render_source")) or "message_segments",
+            verification_status="segment_exact",
+            provenance={
+                "evidence_handle": (
+                    f"segment:{uid}:{_compact(metadata.get('segment_type'))}:{int(metadata.get('segment_ordinal') or 0)}"
+                ),
+                "uid": uid,
+                "segment_type": _compact(metadata.get("segment_type")),
+                "segment_ordinal": int(metadata.get("segment_ordinal") or 0),
+                "body_render_source": _compact(metadata.get("body_render_source")) or "message_segments",
+            },
+            harvest_source="segment_search",
+            recipients_summary=recipients_summary,
+            speaker_attribution=speaker_attribution,
+            reply_context_from=reply_context_from,
+            reply_context_emails=reply_context_emails,
+            thread_locator=thread_locator,
+            email_language_source=segment_full_email or metadata,
+            extra_fields={
+                "segment_type": _compact(metadata.get("segment_type")),
+                "segment_ordinal": int(metadata.get("segment_ordinal") or 0),
+            },
+        ),
     )
 
 
@@ -133,18 +136,20 @@ def _enrich_body_candidate(
         entry,
         metadata,
         result,
-        snippet=snippet,
-        body_render_mode=body_render_mode,
-        body_render_source=body_render_source,
-        verification_status=verification_status,
-        provenance=provenance_payload,
-        harvest_source="search_result",
-        recipients_summary=recipients_summary,
-        speaker_attribution=speaker_attribution,
-        reply_context_from=reply_context_from,
-        reply_context_emails=reply_context_emails,
-        thread_locator=thread_locator,
-        email_language_source=full_email or {},
+        identity=EnrichedRowIdentity(
+            snippet=snippet,
+            body_render_mode=body_render_mode,
+            body_render_source=body_render_source,
+            verification_status=verification_status,
+            provenance=provenance_payload,
+            harvest_source="search_result",
+            recipients_summary=recipients_summary,
+            speaker_attribution=speaker_attribution,
+            reply_context_from=reply_context_from,
+            reply_context_emails=reply_context_emails,
+            thread_locator=thread_locator,
+            email_language_source=full_email or {},
+        ),
     )
 
 

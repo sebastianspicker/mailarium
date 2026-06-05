@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .db_schema import _escape_like
 from .repo_paths import repo_root as _repo_root
 from .sanitization import sanitize_untrusted_text
 from .tools.utils import ToolDepsProto
@@ -227,6 +226,35 @@ def _query_requests_membership(query_text: str) -> bool:
     return "belong" in query_text or "conversation" in query_text
 
 
+def _email_matches_eval_filters(
+    email: dict[str, Any],
+    *,
+    sender: str | None,
+    subject: str | None,
+    folder: str | None,
+    has_attachments: bool | None,
+    email_type: str | None,
+    date_from: str | None,
+    date_to: str | None,
+) -> bool:
+    if sender:
+        sender_text = f"{email.get('sender_email') or ''} {email.get('sender_name') or ''}".casefold()
+        if sender.casefold() not in sender_text:
+            return False
+    if subject and subject.casefold() not in str(email.get("subject") or "").casefold():
+        return False
+    if folder and folder.casefold() not in str(email.get("folder") or "").casefold():
+        return False
+    if has_attachments is not None and bool(email.get("has_attachments")) != has_attachments:
+        return False
+    if email_type and str(email.get("email_type") or "") != email_type:
+        return False
+    email_date = str(email.get("date") or "")[:10]
+    if date_from and email_date < date_from[:10]:
+        return False
+    return not (date_to and email_date > date_to[:10])
+
+
 class _SQLiteEvalRetriever:
     """Fallback retriever for live QA eval when Chroma is unavailable."""
 
@@ -246,34 +274,21 @@ class _SQLiteEvalRetriever:
         date_from: str | None = None,
         date_to: str | None = None,
     ) -> list[dict[str, Any]]:
-        conditions: list[str] = []
-        params: list[Any] = []
-        if sender:
-            conditions.append("(sender_email LIKE ? ESCAPE '\\' OR sender_name LIKE ? ESCAPE '\\')")
-            needle = f"%{_escape_like(sender)}%"
-            params.extend([needle, needle])
-        if subject:
-            conditions.append("subject LIKE ? ESCAPE '\\'")
-            params.append(f"%{_escape_like(subject)}%")
-        if folder:
-            conditions.append("folder LIKE ? ESCAPE '\\'")
-            params.append(f"%{_escape_like(folder)}%")
-        if has_attachments is not None:
-            conditions.append("has_attachments = ?")
-            params.append(1 if has_attachments else 0)
-        if email_type:
-            conditions.append("email_type = ?")
-            params.append(email_type)
-        if date_from:
-            conditions.append("SUBSTR(date, 1, 10) >= ?")
-            params.append(date_from[:10])
-        if date_to:
-            conditions.append("SUBSTR(date, 1, 10) <= ?")
-            params.append(date_to[:10])
-        where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
-        query = f"SELECT * FROM emails{where}"
-        rows = self.email_db.conn.execute(query, params).fetchall()
-        return [dict(row) for row in rows]
+        rows = [dict(row) for row in self.email_db.conn.execute("SELECT * FROM emails").fetchall()]
+        return [
+            email
+            for email in rows
+            if _email_matches_eval_filters(
+                email,
+                sender=sender,
+                subject=subject,
+                folder=folder,
+                has_attachments=has_attachments,
+                email_type=email_type,
+                date_from=date_from,
+                date_to=date_to,
+            )
+        ]
 
     def _body_result(self, email: dict[str, Any], score: float, *, rank_score: float | None = None) -> _SQLiteEvalSearchResult:
         uid = str(email.get("uid") or "")

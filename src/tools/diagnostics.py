@@ -30,7 +30,7 @@ def _table_columns(db, table: str) -> set[str]:
         return set()
     try:
         safe_table = _validate_sql_identifier(table)
-        rows = conn.execute(f"PRAGMA table_info({safe_table})").fetchall()
+        rows = conn.execute("SELECT * FROM pragma_table_info(?)", (safe_table,)).fetchall()
     except sqlite3.Error:
         logger.debug("Diagnostics PRAGMA failed for table %s", table, exc_info=True)
         return set()

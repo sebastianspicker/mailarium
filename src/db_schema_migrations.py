@@ -14,10 +14,10 @@ from ._sql_validation import validate_sql_identifier as _validate_sql_identifier
 
 logger = logging.getLogger(__name__)
 
-_KNOWN_TABLES = frozenset({
+_KNOWN_TABLES = {
     "emails", "ingestion_runs", "evidence_items", "attachments",
     "entity_mentions", "message_segments",
-})
+}
 _COLUMN_TYPE_RE = re.compile(
     r"^(TEXT|INTEGER|REAL|BLOB)"
     r"(\s+DEFAULT\s+((\d+(\.\d+)?)|-?\d+|'[^']*'|\"\"))?"
@@ -25,6 +25,15 @@ _COLUMN_TYPE_RE = re.compile(
     r"(\s+CHECK\s*\([^)]+\))?"
     r"$"
 )
+
+
+def _alter_table_add_column_sql(table: str, column: str, column_type: str) -> str:
+    """Build ALTER TABLE SQL only after validating all dynamic pieces."""
+    safe_table = _validate_sql_identifier(table, allowlist=_KNOWN_TABLES)
+    safe_col = _validate_sql_identifier(column)
+    if not isinstance(column_type, str) or not _COLUMN_TYPE_RE.match(column_type):
+        raise ValueError(f"Invalid column type for {column!r}: {column_type!r}")
+    return f"ALTER TABLE {safe_table} ADD COLUMN {safe_col} {column_type}"
 
 
 def _add_columns_safe(
@@ -39,14 +48,11 @@ def _add_columns_safe(
     *new_cols* keys are column names, values are SQL type definitions.
     Both are validated before being used in SQL.
     """
-    safe_table = _validate_sql_identifier(table, allowlist=_KNOWN_TABLES)
     existing_set = existing if existing is not None else set()
     for col, col_type in new_cols.items():
         safe_col = _validate_sql_identifier(col)
-        if not isinstance(col_type, str) or not _COLUMN_TYPE_RE.match(col_type):
-            raise ValueError(f"Invalid column type for {col!r}: {col_type!r}")
         if safe_col not in existing_set:
-            cur.execute(f"ALTER TABLE {safe_table} ADD COLUMN {safe_col} {col_type}")
+            cur.execute(_alter_table_add_column_sql(table, safe_col, col_type))
 
 
 def apply_pending_migrations_impl(

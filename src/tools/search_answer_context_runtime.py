@@ -1,5 +1,4 @@
-# mypy: disable-error-code=name-defined
-# ruff: noqa: F401, RUF022
+# ruff: noqa: RUF022
 """Compatibility facade for split answer-context runtime helpers."""
 
 from __future__ import annotations
@@ -20,12 +19,10 @@ from .search_answer_context_runtime_budgeting import (
 from .search_answer_context_runtime_builder import (
     build_answer_context_payload as _build_answer_context_payload_impl,
 )
-from .search_answer_context_runtime_candidate_rows import build_initial_candidate_rows
 from .search_answer_context_runtime_lanes import (
     _derive_query_lanes,
     _segment_search_results,
 )
-from .search_answer_context_runtime_multi_lane import _search_multi_lane
 from .search_answer_context_runtime_ranking import (
     _bank_entry,
     _evidence_bank_keys_with_lane_diversity,
@@ -42,14 +39,6 @@ from .search_answer_context_runtime_ranking import (
     _term_tokens,
 )
 from .search_answer_context_runtime_search import _search_across_query_lanes
-from .search_answer_context_runtime_single_lane import (
-    _apply_filter_seen,
-    _assemble_single_lane_results,
-    _build_evidence_bank,
-    _build_lane_diagnostics_item,
-    _compute_support_type_counts,
-    _search_single_lane,
-)
 from .utils import json_response
 
 _SPLIT_MODULES = (
@@ -87,13 +76,13 @@ def _sync_patchable_runtime_globals() -> None:
         module.__dict__.update({key: value for key, value in patchable.items() if value is not None})
 
 
-async def build_answer_context_payload(*args, **kwargs):  # type: ignore[no-redef]
+async def build_answer_context_payload(*args, **kwargs):
     """Build the structured answer-context payload before outward JSON rendering."""
     _sync_patchable_runtime_globals()
     return await _build_answer_context_payload_impl(*args, **kwargs)
 
 
-async def build_answer_context(deps, params) -> str:  # type: ignore[no-redef]
+async def build_answer_context(deps, params) -> str:
     """Build the answer-context payload for ``email_answer_context``."""
     _sync_patchable_runtime_globals()
     return json_response(await build_answer_context_payload(deps, params))

@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import date
 from typing import TYPE_CHECKING, Any, cast
 
@@ -23,6 +24,24 @@ if TYPE_CHECKING:
 # ruff: noqa: F401
 
 _EXPANSION_ERROR_SAMPLE_LIMIT = 8
+
+
+@dataclass(slots=True)
+class EnrichedRowIdentity:
+    snippet: str = ""
+    body_render_mode: str = "full"
+    body_render_source: str = ""
+    verification_status: str = ""
+    provenance: dict[str, Any] = field(default_factory=dict)
+    candidate_kind: str = "body"
+    harvest_source: str = "search_result"
+    recipients_summary: Any = None
+    speaker_attribution: Any = None
+    reply_context_from: str = ""
+    reply_context_emails: list[str] = field(default_factory=list)
+    thread_locator: dict[str, Any] = field(default_factory=dict)
+    email_language_source: dict[str, Any] = field(default_factory=dict)
+    extra_fields: dict[str, Any] = field(default_factory=dict)
 
 
 def _compact(value: Any) -> str:
@@ -248,21 +267,9 @@ def _build_enriched_row_identity(
     metadata: dict[str, Any],
     result: Any,
     *,
-    snippet: str = "",
-    body_render_mode: str = "full",
-    body_render_source: str = "",
-    verification_status: str = "",
-    provenance: dict[str, Any] | None = None,
-    candidate_kind: str = "body",
-    harvest_source: str = "search_result",
-    recipients_summary: Any = None,
-    speaker_attribution: Any = None,
-    reply_context_from: str = "",
-    reply_context_emails: list[str] | None = None,
-    thread_locator: dict[str, Any] | None = None,
-    email_language_source: dict[str, Any] | None = None,
-    extra_fields: dict[str, Any] | None = None,
+    identity: EnrichedRowIdentity | None = None,
 ) -> dict[str, Any]:
+    identity = identity or EnrichedRowIdentity()
     uid = _compact(metadata.get("uid"))
     row: dict[str, Any] = {
         **dict(entry),
@@ -274,28 +281,28 @@ def _build_enriched_row_identity(
         "date": metadata.get("date", ""),
         "conversation_id": metadata.get("conversation_id", ""),
         "score": float(getattr(result, "score", 0.0) or 0.0),
-        "snippet": snippet,
-        "body_render_mode": body_render_mode,
-        "body_render_source": body_render_source,
-        "verification_status": verification_status,
-        "provenance": provenance or {},
-        "candidate_kind": candidate_kind,
-        "harvest_source": harvest_source,
+        "snippet": identity.snippet,
+        "body_render_mode": identity.body_render_mode,
+        "body_render_source": identity.body_render_source,
+        "verification_status": identity.verification_status,
+        "provenance": identity.provenance,
+        "candidate_kind": identity.candidate_kind,
+        "harvest_source": identity.harvest_source,
         "harvest_round": int(entry.get("harvest_round") or 0),
     }
-    row.update(_email_language_fields(email_language_source or metadata))
-    if recipients_summary is not None:
-        row["recipients_summary"] = recipients_summary
-    if speaker_attribution is not None:
-        row["speaker_attribution"] = speaker_attribution
-    if reply_context_from:
-        row["reply_context_from"] = reply_context_from
-    if reply_context_emails:
-        row["reply_context_emails"] = reply_context_emails
-    if thread_locator:
-        row.update(thread_locator)
-    if extra_fields:
-        row.update(extra_fields)
+    row.update(_email_language_fields(identity.email_language_source or metadata))
+    if identity.recipients_summary is not None:
+        row["recipients_summary"] = identity.recipients_summary
+    if identity.speaker_attribution is not None:
+        row["speaker_attribution"] = identity.speaker_attribution
+    if identity.reply_context_from:
+        row["reply_context_from"] = identity.reply_context_from
+    if identity.reply_context_emails:
+        row["reply_context_emails"] = identity.reply_context_emails
+    if identity.thread_locator:
+        row.update(identity.thread_locator)
+    if identity.extra_fields:
+        row.update(identity.extra_fields)
     return row
 
 
@@ -311,6 +318,7 @@ def _expansion_error_entry(
 
 __all__ = [
     "_EXPANSION_ERROR_SAMPLE_LIMIT",
+    "EnrichedRowIdentity",
     "_adaptive_harvest_plan",
     "_annotate_round",
     "_archive_size_hint",

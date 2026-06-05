@@ -30,7 +30,7 @@ def _table_columns(cur: sqlite3.Cursor, table: str) -> set[str]:
     Safety: *table* is validated as a safe SQL identifier.
     """
     safe_table = _validate_sql_identifier(table)
-    return {row[1] for row in cur.execute(f"PRAGMA table_info({safe_table})").fetchall()}
+    return {row[1] for row in cur.execute("SELECT * FROM pragma_table_info(?)", (safe_table,)).fetchall()}
 
 
 _SCHEMA_VERSION = 34

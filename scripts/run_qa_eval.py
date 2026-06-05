@@ -131,6 +131,16 @@ def _interpreter_has_module(module_name: str) -> bool:
     return True
 
 
+def _run_project_reexec(command: list[str]) -> subprocess.CompletedProcess[bytes]:
+    if len(command) < 2 or Path(command[1]).resolve() != Path(__file__).resolve():
+        raise ValueError("QA eval re-exec must target this script")
+    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use.dangerous-subprocess-use
+        command,
+        cwd=ROOT,
+        check=False,
+    )
+
+
 def _maybe_reexec_embedding(argv: list[str], *, live_backend: str) -> int | None:
     if live_backend != "embedding":
         return None
@@ -139,7 +149,7 @@ def _maybe_reexec_embedding(argv: list[str], *, live_backend: str) -> int | None
     venv_python = _project_venv_python()
     if not venv_python.exists():
         return None
-    completed = subprocess.run([str(venv_python), str(Path(__file__).resolve()), *argv], cwd=ROOT, check=False)
+    completed = _run_project_reexec([str(venv_python), str(Path(__file__).resolve()), *argv])
     return int(completed.returncode)
 
 
