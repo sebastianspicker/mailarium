@@ -62,7 +62,7 @@ def attachments_for_uids(conn: sqlite3.Connection, uids: list[str], *, batch_siz
         placeholders = _sql_in_placeholders(batch)
         att_rows = conn.execute(
             "SELECT name, mime_type, size, content_id, is_inline, email_uid"
-            f" FROM attachments WHERE email_uid IN ({placeholders})",  # B608 — placeholders are ? markers, values bound as params
+            f" FROM attachments WHERE email_uid IN ({placeholders})",  # nosec B608
             batch,
         ).fetchall()
         for attachment in att_rows:
@@ -101,8 +101,7 @@ def recipients_for_uids_impl(db: Any, uids: list[str]) -> dict[str, dict[str, li
         batch = uids[start : start + batch_size]
         placeholders = _sql_in_placeholders(batch)
         rows = db.conn.execute(
-            # B608 — placeholders are ? markers.
-            f"SELECT address, display_name, type, email_uid FROM recipients WHERE email_uid IN ({placeholders})",
+            f"SELECT address, display_name, type, email_uid FROM recipients WHERE email_uid IN ({placeholders})",  # nosec B608
             batch,
         ).fetchall()
         for row in rows:
@@ -147,7 +146,7 @@ def get_emails_full_batch_impl(db: Any, uids: list[str]) -> dict[str, dict]:
         placeholders = _sql_in_placeholders(batch)
         rows.extend(
             db.conn.execute(
-                f"SELECT * FROM emails WHERE uid IN ({placeholders})",  # B608 — placeholders are ? markers
+                f"SELECT * FROM emails WHERE uid IN ({placeholders})",  # nosec B608
                 batch,
             ).fetchall()
         )

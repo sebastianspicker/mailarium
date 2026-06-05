@@ -96,7 +96,7 @@ class EventMixin:
             "surface_hash, detected_language, confidence, extractor_version, "
             "provenance_json, created_at, updated_at "
             "FROM event_records "
-            f"WHERE email_uid IN ({placeholders}) "  # B608 — placeholders are ? markers, values bound as params
+            f"WHERE email_uid IN ({placeholders}) "  # nosec B608
             "ORDER BY email_uid, COALESCE(segment_ordinal, 999999), "
             "COALESCE(char_start, 999999), event_kind",
             uids,

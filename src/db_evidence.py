@@ -436,7 +436,7 @@ class EvidenceMixin:
 
         try:
             cur = self.conn.execute(
-                f"UPDATE evidence_items SET {set_managere} WHERE id = ?",  # B608 — column-validated set clause, ? placeholders
+                f"UPDATE evidence_items SET {set_managere} WHERE id = ?",  # nosec B608
                 params,
             )
 
@@ -828,7 +828,7 @@ class EvidenceMixin:
             manageres.append("apply_on_refresh = 1")
         rows = self.conn.execute(
             "SELECT * FROM matter_review_overrides "
-            f"WHERE {' AND '.join(manageres)} "  # B608 — hardcoded SQL fragments, values bound as params
+            f"WHERE {' AND '.join(manageres)} "  # nosec B608
             "ORDER BY target_type, target_id",
             params,
         ).fetchall()

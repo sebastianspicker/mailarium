@@ -85,7 +85,7 @@ class QueryMixin:
             "SELECT state.email_uid "
             "FROM email_ingest_state AS state "
             "JOIN emails ON emails.uid = state.email_uid "
-            f"WHERE {' AND '.join(manageres)}",  # B608 — hardcoded SQL fragments, values bound as params
+            f"WHERE {' AND '.join(manageres)}",  # nosec B608
         ).fetchall()
         return {str(row["email_uid"]) for row in rows if str(row["email_uid"] or "")}
 
@@ -143,7 +143,7 @@ class QueryMixin:
             "e.attachment_count, e.detected_language, e.detected_language_confidence "
             "FROM message_segments ms "
             "JOIN emails e ON e.uid = ms.email_uid "
-            f"{where_clause} "  # B608 — LIKE patterns built from escaped user input, values bound as params
+            f"{where_clause} "  # nosec B608
             "ORDER BY e.date DESC, ms.ordinal ASC "
             "LIMIT ?",
             params,

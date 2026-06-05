@@ -267,7 +267,7 @@ class EntityMixin:
             "ent.entity_text, ent.entity_type, ent.normalized_form "
             "FROM entity_occurrences eo "
             "JOIN entities ent ON ent.id = eo.entity_id "
-            f"WHERE eo.email_uid IN ({placeholders}) "  # B608 — placeholders are ? markers, values bound as params
+            f"WHERE eo.email_uid IN ({placeholders}) "  # nosec B608
             "ORDER BY eo.email_uid, COALESCE(eo.segment_ordinal, 999999), "
             "COALESCE(eo.char_start, 999999), eo.id",
             normalized_uids,

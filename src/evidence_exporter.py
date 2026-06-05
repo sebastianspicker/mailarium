@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from jinja2 import Environment, FileSystemLoader
-from markupsafe import Markup, escape
 
 from .formatting import strip_html_tags, write_html_or_pdf
 from .repo_paths import validate_new_output_path
@@ -54,15 +53,9 @@ class EvidenceExporter:
             autoescape=True,
         )
 
-        def _strip_html_safe(value: str | None) -> Markup:
-            """Strip HTML tags then escape for safe Jinja2 rendering.
-
-            The pipeline: raw value → strip all HTML tags → Jinja2 escape.
-            Wrapping in ``Markup`` is safe because the value has been
-            HTML-stripped and re-escaped before being marked as safe.
-            """
-            cleaned = strip_html_tags(value)
-            return Markup(escape(cleaned))  # HTML-stripped then escaped before marking safe
+        def _strip_html_safe(value: str | None) -> str:
+            """Strip HTML tags; Jinja autoescape escapes the returned text."""
+            return strip_html_tags(value)
 
         self._env.filters["strip_html"] = _strip_html_safe
 

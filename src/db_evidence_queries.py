@@ -330,14 +330,13 @@ def list_evidence_impl(
     where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
 
     total_row = db.conn.execute(
-        f"SELECT COUNT(*) AS c FROM evidence_items{where}",  # B608 — parameterised query, values bound with ? placeholders
+        f"SELECT COUNT(*) AS c FROM evidence_items{where}",  # nosec B608
         params,
     ).fetchone()
     total = total_row["c"]
 
     rows = db.conn.execute(
-        # B608 — parameterised query, values bound with ? placeholders.
-        f"SELECT * FROM evidence_items{where} ORDER BY date ASC LIMIT ? OFFSET ?",
+        f"SELECT * FROM evidence_items{where} ORDER BY date ASC LIMIT ? OFFSET ?",  # nosec B608
         [*params, limit, offset],
     ).fetchall()
 
@@ -453,27 +452,24 @@ def evidence_stats_impl(
     where_sql = (" WHERE " + " AND ".join(where_manageres)) if where_manageres else ""
 
     total_row = db.conn.execute(
-        f"SELECT COUNT(*) AS c FROM evidence_items{where_sql}",  # B608 — parameterised query, values bound with ? placeholders
+        f"SELECT COUNT(*) AS c FROM evidence_items{where_sql}",  # nosec B608
         params,
     ).fetchone()
     total = total_row["c"]
 
     verified_row = db.conn.execute(
-        # B608 — parameterised query, values bound with ? placeholders.
-        f"SELECT COUNT(*) AS c FROM evidence_items{where_sql} {'AND' if where_manageres else 'WHERE'} verified = 1",
+        f"SELECT COUNT(*) AS c FROM evidence_items{where_sql} {'AND' if where_manageres else 'WHERE'} verified = 1",  # nosec B608
         params,
     ).fetchone()
     verified = verified_row["c"]
 
     cat_rows = db.conn.execute(
-        # B608 — parameterised query, values bound with ? placeholders.
-        f"SELECT category, COUNT(*) AS count FROM evidence_items{where_sql} GROUP BY category ORDER BY count DESC",
+        f"SELECT category, COUNT(*) AS count FROM evidence_items{where_sql} GROUP BY category ORDER BY count DESC",  # nosec B608
         params,
     ).fetchall()
 
     rel_rows = db.conn.execute(
-        # B608 — parameterised query, values bound with ? placeholders.
-        f"SELECT relevance, COUNT(*) AS count FROM evidence_items{where_sql} GROUP BY relevance ORDER BY relevance DESC",
+        f"SELECT relevance, COUNT(*) AS count FROM evidence_items{where_sql} GROUP BY relevance ORDER BY relevance DESC",  # nosec B608
         params,
     ).fetchall()
 
@@ -509,7 +505,7 @@ def evidence_candidate_stats_impl(
         "SUM(CASE WHEN candidate_kind = 'attachment' THEN 1 ELSE 0 END) AS attachment_total, "
         "SUM(CASE WHEN verified_exact = 1 AND candidate_kind = 'body' THEN 1 ELSE 0 END) AS exact_body_total, "
         "SUM(CASE WHEN status = 'promoted' THEN 1 ELSE 0 END) AS promoted_total "
-        f"FROM evidence_candidates{where_sql}",  # B608 — parameterised query, values bound with ? placeholders
+        f"FROM evidence_candidates{where_sql}",  # nosec B608
         params,
     ).fetchone()
     wave_rows = db.conn.execute(
@@ -517,14 +513,14 @@ def evidence_candidate_stats_impl(
         "COUNT(*) AS total, "
         "SUM(CASE WHEN status = 'promoted' THEN 1 ELSE 0 END) AS promoted, "
         "SUM(CASE WHEN verified_exact = 1 AND candidate_kind = 'body' THEN 1 ELSE 0 END) AS exact_body_candidates "
-        f"FROM evidence_candidates{where_sql} "  # B608 — parameterised query, values bound with ? placeholders
+        f"FROM evidence_candidates{where_sql} "  # nosec B608
         "GROUP BY wave_id "
         "ORDER BY wave_id ASC",
         params,
     ).fetchall()
     status_rows = db.conn.execute(
         "SELECT status, COUNT(*) AS count "
-        f"FROM evidence_candidates{where_sql} "  # B608 — parameterised query, values bound with ? placeholders
+        f"FROM evidence_candidates{where_sql} "  # nosec B608
         "GROUP BY status "
         "ORDER BY count DESC",
         params,
@@ -563,13 +559,12 @@ def search_evidence_impl(
     where = " WHERE " + " AND ".join(conditions)
 
     total_row = db.conn.execute(
-        f"SELECT COUNT(*) AS c FROM evidence_items{where}",  # B608 — parameterised query, values bound with ? placeholders
+        f"SELECT COUNT(*) AS c FROM evidence_items{where}",  # nosec B608
         params,
     ).fetchone()
 
     rows = db.conn.execute(
-        # B608 — parameterised query, values bound with ? placeholders.
-        f"SELECT * FROM evidence_items{where} ORDER BY date ASC LIMIT ?",
+        f"SELECT * FROM evidence_items{where} ORDER BY date ASC LIMIT ?",  # nosec B608
         [*params, limit],
     ).fetchall()
 
