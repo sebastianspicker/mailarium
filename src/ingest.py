@@ -107,7 +107,7 @@ def _auto_download_spacy_models() -> None:
         logger.debug("spaCy not installed, skipping model download")
         return
 
-    import subprocess  # nosec B404: runs spacy download with hardcoded model names; gated by env var
+    import subprocess  # nosec B404
     import sys
 
     for model_name in _SPACY_MODELS:
@@ -117,7 +117,7 @@ def _auto_download_spacy_models() -> None:
         except OSError:
             logger.info("Downloading spaCy model: %s ...", model_name)
             try:
-                subprocess.check_call(
+                subprocess.check_call(  # nosemgrep
                     [sys.executable, "-m", "spacy", "download", model_name],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,

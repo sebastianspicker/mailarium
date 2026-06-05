@@ -1,6 +1,6 @@
 """Tests for attachment text extraction."""
 
-import subprocess  # nosec B404 — test helper, monkeypatched subprocess.run; no actual subprocess calls
+import subprocess  # nosec B404
 
 from src.attachment_extractor import (
     attachment_format_profile,

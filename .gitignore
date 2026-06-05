@@ -102,6 +102,7 @@ docs/agent/implementation_log/
 docs/agent/plan_history/
 docs/agent/matter_analysis/
 docs/agent/archive/
+docs/archive/
 scripts/build_forensic_*.py
 scripts/build_lawyer_*.py
 scripts/reverify_evidence_sources.py

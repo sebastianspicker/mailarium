@@ -29,7 +29,7 @@ class TrainingDataGenerator:
 
     def __init__(self, db: EmailDatabase, seed: int = 42) -> None:
         self._db = db
-        self._rng = random.Random(seed)  # nosec B311 — training-data shuffling only (non-security); seed=42 for reproducibility
+        self._rng = random.Random(seed)  # nosec B311
 
     def generate_triplets(
         self,

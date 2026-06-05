@@ -282,42 +282,64 @@ def test_public_docs_capture_email_deep_context_body_budget_sentinel_contract() 
 
 
 def test_autonomous_execution_prompt_pack_and_templates_cover_live_run_contract():
-    plan = _read("docs/agent/Plan.md")
-    companion = _read("docs/agent/question_execution_companion.md")
-    runbook = _read("docs/agent/email_matter_analysis_single_source_of_truth.md")
-    checkpoint = _read("docs/agent/email_matter_investigation_checkpoint_template.md")
-    prompt_pack = _read("docs/agent/question_execution_prompt_pack.md")
-    register_template = _read("docs/agent/question_register_template.md")
-    open_tasks_template = _read("docs/agent/open_tasks_companion_template.md")
-    mcp_client_config = _read("docs/agent/mcp_client_config_snippet.md")
+    docs = _autonomous_execution_docs()
+    _assert_autonomous_doc_routes(docs)
+    _assert_checkpoint_contract(docs["checkpoint"])
+    _assert_prompt_pack_headings(docs["prompt_pack"])
+    _assert_question_register_fields(docs["register_template"])
+    _assert_open_tasks_fields(docs["open_tasks_template"])
+    _assert_mcp_client_config_tools(docs["mcp_client_config"])
 
-    assert "docs/agent/question_execution_prompt_pack.md" in plan
-    assert "docs/agent/question_register_template.md" in plan
-    assert "docs/agent/open_tasks_companion_template.md" in plan
-    assert "docs/agent/mcp_client_config_snippet.md" in plan
 
-    assert "docs/agent/question_execution_prompt_pack.md" in companion
-    assert "docs/agent/question_register_template.md" in companion
-    assert "docs/agent/open_tasks_companion_template.md" in companion
+def _autonomous_execution_docs() -> dict[str, str]:
+    return {
+        "plan": _read("docs/agent/Plan.md"),
+        "companion": _read("docs/agent/question_execution_companion.md"),
+        "runbook": _read("docs/agent/email_matter_analysis_single_source_of_truth.md"),
+        "checkpoint": _read("docs/agent/email_matter_investigation_checkpoint_template.md"),
+        "prompt_pack": _read("docs/agent/question_execution_prompt_pack.md"),
+        "register_template": _read("docs/agent/question_register_template.md"),
+        "open_tasks_template": _read("docs/agent/open_tasks_companion_template.md"),
+        "mcp_client_config": _read("docs/agent/mcp_client_config_snippet.md"),
+    }
 
-    assert "private/tests/results/11_memo_draft_dashboard/question_register.md" in runbook
-    assert "docs/agent/question_execution_prompt_pack.md" in runbook
-    assert "docs/agent/question_register_template.md" in runbook
-    assert "docs/agent/open_tasks_companion_template.md" in runbook
-    assert "docs/agent/mcp_client_config_snippet.md" in runbook
-    assert "private/runtime/current/chromadb" in runbook
-    assert "private/runtime/current/email_metadata.db" in runbook
-    assert "scripts/private_runtime_current_env.sh" in runbook
 
-    assert "Question Register Delta" in checkpoint
-    assert "best_supporting_sources" in checkpoint
-    assert "best_counter_sources" in checkpoint
-    assert "blocker_class" in checkpoint
-    assert "remediation_taken" in checkpoint
-    assert "rerun_count" in checkpoint
-    assert "next_mcp_step" in checkpoint
-    assert "Open-Tasks Delta" in checkpoint
+def _assert_autonomous_doc_routes(docs: dict[str, str]) -> None:
+    for target in [
+        "docs/agent/question_execution_prompt_pack.md",
+        "docs/agent/question_register_template.md",
+        "docs/agent/open_tasks_companion_template.md",
+    ]:
+        assert target in docs["plan"]
+        assert target in docs["companion"]
+        assert target in docs["runbook"]
+    assert "docs/agent/mcp_client_config_snippet.md" in docs["plan"]
+    assert "docs/agent/mcp_client_config_snippet.md" in docs["runbook"]
+    assert "private/tests/results/11_memo_draft_dashboard/question_register.md" in docs["runbook"]
+    assert "scripts/private_runtime_current_env.sh" in docs["runbook"]
+    _assert_runtime_paths(docs["runbook"])
 
+
+def _assert_runtime_paths(text: str) -> None:
+    assert "private/runtime/current/chromadb" in text
+    assert "private/runtime/current/email_metadata.db" in text
+
+
+def _assert_checkpoint_contract(checkpoint: str) -> None:
+    for marker in [
+        "Question Register Delta",
+        "best_supporting_sources",
+        "best_counter_sources",
+        "blocker_class",
+        "remediation_taken",
+        "rerun_count",
+        "next_mcp_step",
+        "Open-Tasks Delta",
+    ]:
+        assert marker in checkpoint
+
+
+def _assert_prompt_pack_headings(prompt_pack: str) -> None:
     for heading in [
         "## MCP Readiness Prompt",
         "## Full Campaign Kickoff Prompt",
@@ -331,6 +353,8 @@ def test_autonomous_execution_prompt_pack_and_templates_cover_live_run_contract(
     ]:
         assert heading in prompt_pack
 
+
+def _assert_question_register_fields(register_template: str) -> None:
     for field in [
         "`question_id`",
         "`wave`",
@@ -344,11 +368,15 @@ def test_autonomous_execution_prompt_pack_and_templates_cover_live_run_contract(
     ]:
         assert field in register_template
 
+
+def _assert_open_tasks_fields(open_tasks_template: str) -> None:
     assert "true external missing record" in open_tasks_template
     assert "`linked_question_ids`" in open_tasks_template
     assert "`next acquisition path`" in open_tasks_template
     assert "`resume_wave`" in open_tasks_template
 
+
+def _assert_mcp_client_config_tools(mcp_client_config: str) -> None:
     for tool_name in [
         "email_search_structured",
         "email_triage",
@@ -365,8 +393,7 @@ def test_autonomous_execution_prompt_pack_and_templates_cover_live_run_contract(
     ]:
         assert tool_name in mcp_client_config
 
-    assert "private/runtime/current/chromadb" in mcp_client_config
-    assert "private/runtime/current/email_metadata.db" in mcp_client_config
+    _assert_runtime_paths(mcp_client_config)
 
 
 def test_mandatory_matter_inputs_contract_is_documented_across_main_run_surfaces() -> None:

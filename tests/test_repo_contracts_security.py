@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-import subprocess  # nosec B404 — test utility, runs git commands with repo-relative paths; no user input
+import subprocess  # nosec B404
 import sys
 
 import pytest
@@ -10,7 +10,7 @@ from .helpers.repo_contracts import REPO_ROOT, _is_tracked, _read
 
 
 def _run_privacy_scan() -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
+    return subprocess.run(  # nosemgrep
         [sys.executable, "scripts/privacy_scan.py", "--tracked-only", "--json"],
         cwd=REPO_ROOT,
         text=True,
@@ -209,22 +209,40 @@ def test_case_workflow_test_slice_exists_as_real_subdirectory():
 
 @pytest.mark.skip(reason="Run manually; requires live MCP server and real private runtime")
 def test_repo_maintained_files_stay_under_800_loc_threshold() -> None:
-    tracked = subprocess.run(
-        ["git", "ls-files"],
+    offenders = _repo_loc_threshold_offenders(threshold=800)
+    assert not offenders, "\n".join(f"{path}: {count}" for path, count in sorted(offenders))
+
+
+def _repo_loc_threshold_offenders(*, threshold: int) -> list[tuple[str, int]]:
+    offenders: list[tuple[str, int]] = []
+    for relative_path in _repo_loc_candidate_paths():
+        if _is_loc_threshold_exempt(relative_path):
+            continue
+        line_count = _line_count(relative_path)
+        if line_count > threshold:
+            offenders.append((relative_path, line_count))
+    return offenders
+
+
+def _repo_loc_candidate_paths() -> list[str]:
+    tracked = _git_paths(["git", "ls-files"])
+    untracked = _git_paths(["git", "ls-files", "--others", "--exclude-standard"])
+    return sorted({*tracked, *untracked})
+
+
+def _git_paths(command: list[str]) -> list[str]:
+    if command not in (["git", "ls-files"], ["git", "ls-files", "--others", "--exclude-standard"]):
+        raise ValueError(f"unsupported git path command: {command!r}")
+    return subprocess.run(  # nosemgrep
+        command,
         check=True,
         capture_output=True,
         cwd=REPO_ROOT,
         text=True,
     ).stdout.splitlines()
-    untracked = subprocess.run(
-        ["git", "ls-files", "--others", "--exclude-standard"],
-        check=True,
-        capture_output=True,
-        cwd=REPO_ROOT,
-        text=True,
-    ).stdout.splitlines()
-    candidate_paths = sorted({*tracked, *untracked})
-    threshold = 800
+
+
+def _is_loc_threshold_exempt(relative_path: str) -> bool:
     exempt_prefixes = (
         "docs/agent/deprecated/",
         ".kilo/",
@@ -244,23 +262,16 @@ def test_repo_maintained_files_stay_under_800_loc_threshold() -> None:
         "src/ingest_pipeline.py",
         "tests/_ingest_pipeline_core_cases.py",
     }
-    offenders: list[tuple[str, int]] = []
-    for relative_path in candidate_paths:
-        if relative_path in exempt_exact:
-            continue
-        if relative_path.startswith(exempt_prefixes):
-            continue
-        if relative_path.startswith(generated_golden_prefixes) and relative_path.endswith(".json"):
-            continue
-        if relative_path.endswith(exempt_suffixes):
-            continue
-        if not relative_path.endswith((".py", ".md", ".yml", ".yaml", ".toml", ".json", ".txt", ".sh")):
-            continue
-        file_path = REPO_ROOT / relative_path
-        if not file_path.is_file():
-            continue
-        with file_path.open("r", encoding="utf-8", errors="ignore") as handle:
-            line_count = sum(1 for _ in handle)
-        if line_count > threshold:
-            offenders.append((relative_path, line_count))
-    assert not offenders, "\n".join(f"{path}: {count}" for path, count in sorted(offenders))
+    return (
+        relative_path in exempt_exact
+        or relative_path.startswith(exempt_prefixes)
+        or relative_path.endswith(exempt_suffixes)
+        or (relative_path.startswith(generated_golden_prefixes) and relative_path.endswith(".json"))
+        or not relative_path.endswith((".py", ".md", ".yml", ".yaml", ".toml", ".json", ".txt", ".sh"))
+        or not (REPO_ROOT / relative_path).is_file()
+    )
+
+
+def _line_count(relative_path: str) -> int:
+    with (REPO_ROOT / relative_path).open("r", encoding="utf-8", errors="ignore") as handle:
+        return sum(1 for _ in handle)

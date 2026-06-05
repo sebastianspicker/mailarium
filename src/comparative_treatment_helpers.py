@@ -330,9 +330,11 @@ def comparison_quality(
         uncertainty_reasons.append("Comparable reply-latency evidence is not available for both sides in the current record.")
 
     similarity_score = int(similarity.get("similarity_score") or 0)
+    similarity_threshold_met = similarity_score >= 4
+    message_delta_threshold_met = message_delta <= 1
     if (
-        similarity_score >= 4
-        and message_delta <= 1
+        similarity_threshold_met
+        and message_delta_threshold_met
         and bool(similarity.get("shared_process_step"))
         and bool(similarity.get("shared_workflow_stage"))
         and bool(similarity.get("shared_day_window"))

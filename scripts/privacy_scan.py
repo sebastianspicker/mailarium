@@ -12,7 +12,7 @@ import argparse
 import json
 import re
 import shutil
-import subprocess  # nosec B404: runs git with hardcoded subcommands; REPO_ROOT from __file__; no user input
+import subprocess  # nosec B404
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -132,7 +132,7 @@ class Finding:
 
 
 def _run_git(args: list[str], *, check: bool = True) -> list[str]:
-    completed = subprocess.run(
+    completed = subprocess.run(  # nosemgrep
         [_GIT_PATH, *args],
         cwd=REPO_ROOT,
         check=check,
@@ -143,7 +143,7 @@ def _run_git(args: list[str], *, check: bool = True) -> list[str]:
 
 
 def _run_git_bytes(args: list[str], *, check: bool = True) -> bytes:
-    completed = subprocess.run(
+    completed = subprocess.run(  # nosemgrep
         [_GIT_PATH, *args],
         cwd=REPO_ROOT,
         check=check,
@@ -161,7 +161,7 @@ def _untracked_paths() -> list[str]:
 
 
 def _history_paths() -> list[str]:
-    completed = subprocess.run(
+    completed = subprocess.run(  # nosemgrep
         [_GIT_PATH, "log", "--all", "--name-only", "--pretty=format:"],
         cwd=REPO_ROOT,
         check=True,

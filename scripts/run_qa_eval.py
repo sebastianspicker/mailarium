@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess  # nosec B404: re-exec pattern — same script under venv python; argv forwarded to self
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 
@@ -134,10 +134,10 @@ def _interpreter_has_module(module_name: str) -> bool:
 def _run_project_reexec(command: list[str]) -> subprocess.CompletedProcess[bytes]:
     if len(command) < 2 or Path(command[1]).resolve() != Path(__file__).resolve():
         raise ValueError("QA eval re-exec must target this script")
-    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
+    return subprocess.run(  # nosemgrep
         command,
-        cwd=ROOT,
         check=False,
+        cwd=ROOT,
     )
 
 

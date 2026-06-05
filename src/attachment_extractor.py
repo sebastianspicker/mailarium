@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess  # nosec B404: runs tesseract/pdftoppm via shutil.which(); env vars validated/clamped
+import subprocess  # nosec B404
 import tempfile
 from pathlib import Path
 
@@ -37,14 +37,14 @@ from .attachment_extractor_text import (
 from .attachment_identity import DEFAULT_ATTACHMENT_OCR_LANG
 from .image_embedder import _IMAGE_EXTENSIONS
 
-_image_embedder = None
+_image_embedder = None  # pylint: disable=invalid-name
 
 
 def _run_ocr_process(command: list[str], *, timeout_seconds: int) -> subprocess.CompletedProcess[str]:
     executable = Path(command[0]).name if command else ""
     if executable not in {"tesseract", "pdftoppm"}:
         raise ValueError(f"Unsupported OCR executable: {executable!r}")
-    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
+    return subprocess.run(  # nosemgrep
         command,
         check=False,
         capture_output=True,

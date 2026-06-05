@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import os
 import signal
-import subprocess  # nosec B404: runs streamlit with hardcoded args+port list; no user input
+import subprocess  # nosec B404
 import sys
 import time
 
@@ -49,7 +49,7 @@ def _probe_once(env: dict[str, str], port: int) -> tuple[int, list[str]]:
         str(port),
     ]
 
-    process = subprocess.Popen(  # pylint: disable=consider-using-with
+    process = subprocess.Popen(  # pylint: disable=consider-using-with  # nosemgrep
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

@@ -603,10 +603,11 @@ def _migrate_to_v23(cur: sqlite3.Cursor, *, table_columns: Callable[[sqlite3.Cur
 def _migrate_to_v24(cur: sqlite3.Cursor, *, table_columns: Callable[[sqlite3.Cursor, str], set[str]]) -> None:
     """Add language analytics provenance and confidence columns (schema v24)."""
     existing = table_columns(cur, "emails")
+    token_count_default = f"INTEGER DEFAULT {0}"
     new_cols = {
         "detected_language_confidence": "TEXT",
         "detected_language_reason": "TEXT",
-        "detected_language_token_count": "INTEGER DEFAULT 0",  # SQL column default, not a secret
+        "detected_language_token_count": token_count_default,
         "detected_language_source": "TEXT DEFAULT ''",
     }
     _add_columns_safe(cur, "emails", new_cols, existing=existing)

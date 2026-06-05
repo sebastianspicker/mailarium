@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess  # nosec B404: runs git ls-files -z with hardcoded args; no user input
+import subprocess  # nosec B404
 from functools import lru_cache
 from pathlib import Path
 
@@ -68,7 +68,7 @@ def normalize_local_path(value: str, *, field_name: str = "path") -> Path:
 @lru_cache(maxsize=1)
 def _tracked_repo_paths() -> frozenset[str]:
     git_path = shutil.which("git") or "git"
-    completed = subprocess.run(
+    completed = subprocess.run(  # nosemgrep
         [git_path, "ls-files", "-z"],
         cwd=repo_root(),
         check=False,

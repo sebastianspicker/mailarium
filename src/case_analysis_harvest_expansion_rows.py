@@ -73,21 +73,13 @@ def _attachment_expansion_row(
     filename: str,
     relevance_terms: list[str],
 ) -> dict[str, Any]:
-    relevance_score = _text_overlap_score(
-        haystack=" ".join(
-            [
-                str(attachment.get("name") or ""),
-                str(attachment.get("extracted_text") or ""),
-                str(attachment.get("text_preview") or ""),
-            ]
-        ),
-        terms=relevance_terms,
-    )
-    snippet = _compact(attachment.get("extracted_text") or attachment.get("text_preview") or attachment.get("name"))
+    attachment_text = _attachment_display_text(attachment)
+    relevance_score = _attachment_expansion_relevance_score(attachment, relevance_terms)
+    attachment_summary = _attachment_expansion_summary(attachment, filename)
     return {
         "uid": uid,
         "chunk_id": f"{uid}:attachment:{filename}",
-        "score": float(seed.get("score") or 0.0) * (0.8 + min(relevance_score, 4) * 0.04),
+        "score": _attachment_expansion_score(seed, relevance_score),
         "subject": _compact(seed.get("subject")),
         "sender_email": _compact(seed.get("sender_email")),
         "sender_name": _compact(seed.get("sender_name")),
@@ -97,7 +89,7 @@ def _attachment_expansion_row(
         "has_attachments": True,
         "candidate_kind": "attachment",
         "attachment_filename": filename,
-        "snippet": snippet[:280],
+        "snippet": attachment_text[:280],
         "matched_query_lanes": list(seed.get("matched_query_lanes") or []),
         "matched_query_queries": list(seed.get("matched_query_queries") or []),
         "result_key": f"{uid}:attachment:{filename}",
@@ -105,20 +97,49 @@ def _attachment_expansion_row(
         "harvest_round": int(seed.get("harvest_round") or 0),
         "verification_status": "attachment_reference",
         "relevance_score": relevance_score,
-        "attachment": {
-            "filename": filename,
-            "mime_type": _compact(attachment.get("mime_type")),
-            "evidence_strength": _compact(attachment.get("evidence_strength")) or "weak_reference",
-            "text_available": bool(_compact(attachment.get("extracted_text") or attachment.get("text_preview"))),
-        },
+        "attachment": attachment_summary,
         "detected_language": _compact(seed.get("detected_language")),
         "detected_language_confidence": _compact(seed.get("detected_language_confidence")),
-        "provenance": {
-            "evidence_handle": f"attachment:{uid}:{filename}",
-            "uid": uid,
-            "attachment_filename": filename,
-            "body_render_source": "attachment_expansion",
-        },
+        "provenance": _attachment_expansion_provenance(uid=uid, filename=filename),
+    }
+
+
+def _attachment_display_text(attachment: dict[str, Any]) -> str:
+    return _compact(attachment.get("extracted_text") or attachment.get("text_preview") or attachment.get("name"))
+
+
+def _attachment_expansion_relevance_score(attachment: dict[str, Any], relevance_terms: list[str]) -> int:
+    return _text_overlap_score(
+        haystack=" ".join(
+            [
+                str(attachment.get("name") or ""),
+                str(attachment.get("extracted_text") or ""),
+                str(attachment.get("text_preview") or ""),
+            ]
+        ),
+        terms=relevance_terms,
+    )
+
+
+def _attachment_expansion_score(seed: dict[str, Any], relevance_score: int) -> float:
+    return float(seed.get("score") or 0.0) * (0.8 + min(relevance_score, 4) * 0.04)
+
+
+def _attachment_expansion_summary(attachment: dict[str, Any], filename: str) -> dict[str, Any]:
+    return {
+        "filename": filename,
+        "mime_type": _compact(attachment.get("mime_type")),
+        "evidence_strength": _compact(attachment.get("evidence_strength")) or "weak_reference",
+        "text_available": bool(_compact(attachment.get("extracted_text") or attachment.get("text_preview"))),
+    }
+
+
+def _attachment_expansion_provenance(*, uid: str, filename: str) -> dict[str, str]:
+    return {
+        "evidence_handle": f"attachment:{uid}:{filename}",
+        "uid": uid,
+        "attachment_filename": filename,
+        "body_render_source": "attachment_expansion",
     }
 
 
@@ -147,6 +168,126 @@ def _rank_thread_rows(thread_rows: list[Any], relevance_terms: list[str]) -> lis
     )
 
 
+def _thread_expansion_error(
+    diagnostics: dict[str, Any],
+    *,
+    conversation_id: str,
+    seed: dict[str, Any],
+    exc: Exception,
+) -> None:
+    _expansion_error_entry(
+        diagnostics,
+        {
+            "conversation_id": conversation_id,
+            "seed_uid": _compact(seed.get("uid")),
+            "error_type": type(exc).__name__,
+            "error": _compact(str(exc))[:240],
+        },
+    )
+
+
+def _thread_expansion_row(
+    *,
+    seed: dict[str, Any],
+    row: dict[str, Any],
+    uid: str,
+    conversation_id: str,
+    relevance_terms: list[str],
+) -> dict[str, Any]:
+    relevance_score = _text_overlap_score(
+        haystack=" ".join([str(row.get("subject") or ""), _best_body_text(dict(row))]),
+        terms=relevance_terms,
+    )
+    return {
+        "uid": uid,
+        "chunk_id": f"{uid}:thread_expansion",
+        "score": float(seed.get("score") or 0.0) * (0.85 + min(relevance_score, 4) * 0.03),
+        "subject": _compact(row.get("subject")),
+        "sender_email": _compact(row.get("sender_email")),
+        "sender_name": _compact(row.get("sender_name")),
+        "date": _compact(row.get("date")),
+        "conversation_id": conversation_id,
+        "folder": _compact(row.get("folder")),
+        "has_attachments": bool(row.get("has_attachments") or row.get("attachment_count")),
+        "candidate_kind": "body",
+        "attachment_filename": "",
+        "snippet": _best_body_text(dict(row))[:280],
+        "matched_query_lanes": list(seed.get("matched_query_lanes") or []),
+        "matched_query_queries": list(seed.get("matched_query_queries") or []),
+        "result_key": f"{uid}:thread_expansion",
+        "harvest_source": "thread_expansion",
+        "harvest_round": int(seed.get("harvest_round") or 0),
+        "verification_status": "thread_context",
+        "relevance_score": relevance_score,
+        **_email_language_fields(dict(row)),
+        "provenance": {
+            "evidence_handle": f"thread:{uid}:{conversation_id}",
+            "uid": uid,
+            "conversation_id": conversation_id,
+            "body_render_source": "thread_expansion",
+        },
+    }
+
+
+def _thread_expansion_seed_rows(
+    *,
+    seed: dict[str, Any],
+    thread_rows: list[Any],
+    existing_uids: set[str],
+    conversation_id: str,
+    exhaustive_review: bool,
+) -> list[dict[str, Any]]:
+    relevance_terms = _seed_relevance_terms(seed)
+    expanded: list[dict[str, Any]] = []
+    for row in _rank_thread_rows(thread_rows, relevance_terms):
+        uid = _compact(row.get("uid"))
+        if not uid or uid in existing_uids:
+            continue
+        existing_uids.add(uid)
+        expanded.append(
+            _thread_expansion_row(
+                seed=seed,
+                row=row,
+                uid=uid,
+                conversation_id=conversation_id,
+                relevance_terms=relevance_terms,
+            )
+        )
+        if len(expanded) >= (4 if exhaustive_review else 2):
+            break
+    return expanded
+
+
+def _thread_rows_for_seed(
+    db: Any,
+    *,
+    diagnostics: dict[str, Any],
+    seed: dict[str, Any],
+    conversation_id: str,
+) -> list[Any]:
+    try:
+        return db.get_thread_emails(conversation_id) or []
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        _thread_expansion_error(diagnostics, conversation_id=conversation_id, seed=seed, exc=exc)
+        return []
+
+
+def _thread_seed_conversation_id(seed: dict[str, Any]) -> str:
+    if str(seed.get("candidate_kind") or "") == "attachment":
+        return ""
+    return _compact(seed.get("conversation_id"))
+
+
+def _mark_attempted(diagnostics: dict[str, Any]) -> None:
+    diagnostics["attempted_count"] = int(diagnostics.get("attempted_count") or 0) + 1
+
+
+def _finalize_expansion_diagnostics(diagnostics: dict[str, Any], expanded: list[dict[str, Any]]) -> dict[str, Any]:
+    diagnostics["expanded_row_count"] = len(expanded)
+    diagnostics["status"] = "partial" if int(diagnostics.get("error_count") or 0) > 0 else "ok"
+    return diagnostics
+
+
 def _thread_expansion_rows(
     db: Any,
     *,
@@ -159,75 +300,64 @@ def _thread_expansion_rows(
     existing_uids = {str(item.get("uid") or "") for item in evidence_bank if _compact(item.get("uid"))}
     expanded: list[dict[str, Any]] = []
     for seed in evidence_bank:
-        if str(seed.get("candidate_kind") or "") == "attachment":
-            continue
-        conversation_id = _compact(seed.get("conversation_id"))
+        conversation_id = _thread_seed_conversation_id(seed)
         if not conversation_id:
             continue
-        diagnostics["attempted_count"] = int(diagnostics.get("attempted_count") or 0) + 1
-        try:
-            thread_rows = db.get_thread_emails(conversation_id) or []
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            _expansion_error_entry(
-                diagnostics,
-                {
-                    "conversation_id": conversation_id,
-                    "seed_uid": _compact(seed.get("uid")),
-                    "error_type": type(exc).__name__,
-                    "error": _compact(str(exc))[:240],
-                },
+        _mark_attempted(diagnostics)
+        thread_rows = _thread_rows_for_seed(db, diagnostics=diagnostics, seed=seed, conversation_id=conversation_id)
+        expanded.extend(
+            _thread_expansion_seed_rows(
+                seed=seed,
+                thread_rows=thread_rows,
+                existing_uids=existing_uids,
+                conversation_id=conversation_id,
+                exhaustive_review=exhaustive_review,
             )
+        )
+    return expanded, _finalize_expansion_diagnostics(diagnostics, expanded)
+
+
+def _attachment_expansion_error(diagnostics: dict[str, Any], *, uid: str, item: dict[str, Any], exc: Exception) -> None:
+    _expansion_error_entry(
+        diagnostics,
+        {
+            "uid": uid,
+            "seed_result_key": _compact(item.get("result_key")),
+            "error_type": type(exc).__name__,
+            "error": _compact(str(exc))[:240],
+        },
+    )
+
+
+def _attachment_expansion_seed_rows(
+    *,
+    seed: dict[str, Any],
+    uid: str,
+    attachments: list[Any],
+    exhaustive_review: bool,
+    seen: set[tuple[str, str]],
+) -> list[dict[str, Any]]:
+    relevance_terms = _seed_relevance_terms(seed)
+    rows: list[dict[str, Any]] = []
+    for attachment in _select_attachments(
+        attachments,
+        relevance_terms=relevance_terms,
+        exhaustive_review=exhaustive_review,
+    ):
+        filename = _compact(attachment.get("name"))
+        if not filename or (uid, filename) in seen:
             continue
-        relevance_terms = _seed_relevance_terms(seed)
-        ranked_thread_rows = _rank_thread_rows(thread_rows, relevance_terms)
-        max_additions = 4 if exhaustive_review else 2
-        additions = 0
-        for row in ranked_thread_rows:
-            uid = _compact(row.get("uid"))
-            if not uid or uid in existing_uids:
-                continue
-            relevance_score = _text_overlap_score(
-                haystack=" ".join([str(row.get("subject") or ""), _best_body_text(dict(row))]),
-                terms=relevance_terms,
+        seen.add((uid, filename))
+        rows.append(
+            _attachment_expansion_row(
+                seed=seed,
+                uid=uid,
+                attachment=attachment,
+                filename=filename,
+                relevance_terms=relevance_terms,
             )
-            existing_uids.add(uid)
-            expanded.append(
-                {
-                    "uid": uid,
-                    "chunk_id": f"{uid}:thread_expansion",
-                    "score": float(seed.get("score") or 0.0) * (0.85 + min(relevance_score, 4) * 0.03),
-                    "subject": _compact(row.get("subject")),
-                    "sender_email": _compact(row.get("sender_email")),
-                    "sender_name": _compact(row.get("sender_name")),
-                    "date": _compact(row.get("date")),
-                    "conversation_id": conversation_id,
-                    "folder": _compact(row.get("folder")),
-                    "has_attachments": bool(row.get("has_attachments") or row.get("attachment_count")),
-                    "candidate_kind": "body",
-                    "attachment_filename": "",
-                    "snippet": _best_body_text(dict(row))[:280],
-                    "matched_query_lanes": list(seed.get("matched_query_lanes") or []),
-                    "matched_query_queries": list(seed.get("matched_query_queries") or []),
-                    "result_key": f"{uid}:thread_expansion",
-                    "harvest_source": "thread_expansion",
-                    "harvest_round": int(seed.get("harvest_round") or 0),
-                    "verification_status": "thread_context",
-                    "relevance_score": relevance_score,
-                    **_email_language_fields(dict(row)),
-                    "provenance": {
-                        "evidence_handle": f"thread:{uid}:{conversation_id}",
-                        "uid": uid,
-                        "conversation_id": conversation_id,
-                        "body_render_source": "thread_expansion",
-                    },
-                }
-            )
-            additions += 1
-            if additions >= max_additions:
-                break
-    diagnostics["expanded_row_count"] = len(expanded)
-    diagnostics["status"] = "partial" if int(diagnostics.get("error_count") or 0) > 0 else "ok"
-    return expanded, diagnostics
+        )
+    return rows
 
 
 def _attachment_expansion_rows(
@@ -245,42 +375,22 @@ def _attachment_expansion_rows(
         uid = _compact(item.get("uid"))
         if not uid:
             continue
-        diagnostics["attempted_count"] = int(diagnostics.get("attempted_count") or 0) + 1
+        _mark_attempted(diagnostics)
         try:
             attachments = db.attachments_for_email(uid) or []
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            _expansion_error_entry(
-                diagnostics,
-                {
-                    "uid": uid,
-                    "seed_result_key": _compact(item.get("result_key")),
-                    "error_type": type(exc).__name__,
-                    "error": _compact(str(exc))[:240],
-                },
-            )
+            _attachment_expansion_error(diagnostics, uid=uid, item=item, exc=exc)
             continue
-        relevance_terms = _seed_relevance_terms(item)
-        for attachment in _select_attachments(
-            attachments,
-            relevance_terms=relevance_terms,
-            exhaustive_review=exhaustive_review,
-        ):
-            filename = _compact(attachment.get("name"))
-            if not filename or (uid, filename) in seen:
-                continue
-            seen.add((uid, filename))
-            expanded.append(
-                _attachment_expansion_row(
-                    seed=item,
-                    uid=uid,
-                    attachment=attachment,
-                    filename=filename,
-                    relevance_terms=relevance_terms,
-                )
+        expanded.extend(
+            _attachment_expansion_seed_rows(
+                seed=item,
+                uid=uid,
+                attachments=attachments,
+                exhaustive_review=exhaustive_review,
+                seen=seen,
             )
-    diagnostics["expanded_row_count"] = len(expanded)
-    diagnostics["status"] = "partial" if int(diagnostics.get("error_count") or 0) > 0 else "ok"
-    return expanded, diagnostics
+        )
+    return expanded, _finalize_expansion_diagnostics(diagnostics, expanded)
 
 
 __all__ = [

@@ -433,8 +433,8 @@ class TestMain:
 
 
 class TestAcquireInstanceLock:
-    def test_acquire_lock_fails_closed_when_no_fcntl(self, monkeypatch):
-        """When fcntl is not importable, startup refuses to run without a lock."""
+    def test_acquire_lock_warns_and_continues_when_no_fcntl(self, monkeypatch, caplog):
+        """When fcntl is not importable, startup continues without a lock."""
         from src import mcp_server
 
         original = mcp_server._lock_fd
@@ -444,9 +444,8 @@ class TestAcquireInstanceLock:
             sys.modules["fcntl"] = None  # type: ignore[assignment]
 
             try:
-                with pytest.raises(SystemExit) as exc_info:
-                    mcp_server._acquire_instance_lock()
-                assert exc_info.value.code == 1
+                mcp_server._acquire_instance_lock()
+                assert "continuing without an MCP instance lock" in caplog.text
             finally:
                 if saved_fcntl is not None:
                     sys.modules["fcntl"] = saved_fcntl

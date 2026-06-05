@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-import subprocess  # nosec B404 — test utility, runs script subprocess with hardcoded args; no user input
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 from typing import Any

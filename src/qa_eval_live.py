@@ -224,6 +224,34 @@ def _query_requests_membership(query_text: str) -> bool:
     return "belong" in query_text or "conversation" in query_text
 
 
+def _sender_matches_filter(email: dict[str, Any], sender: str | None) -> bool:
+    if not sender:
+        return True
+    sender_text = f"{email.get('sender_email') or ''} {email.get('sender_name') or ''}".casefold()
+    return sender.casefold() in sender_text
+
+
+def _text_field_matches_filter(email: dict[str, Any], field: str, expected: str | None) -> bool:
+    return not expected or expected.casefold() in str(email.get(field) or "").casefold()
+
+
+def _date_matches_eval_filters(email_date: str, *, date_from: str | None, date_to: str | None) -> bool:
+    if date_from and email_date < date_from[:10]:
+        return False
+    return not (date_to and email_date > date_to[:10])
+
+
+def _metadata_matches_eval_filters(
+    email: dict[str, Any],
+    *,
+    has_attachments: bool | None,
+    email_type: str | None,
+) -> bool:
+    if has_attachments is not None and bool(email.get("has_attachments")) != has_attachments:
+        return False
+    return not (email_type and str(email.get("email_type") or "") != email_type)
+
+
 def _email_matches_eval_filters(
     email: dict[str, Any],
     *,
@@ -235,22 +263,16 @@ def _email_matches_eval_filters(
     date_from: str | None,
     date_to: str | None,
 ) -> bool:
-    if sender:
-        sender_text = f"{email.get('sender_email') or ''} {email.get('sender_name') or ''}".casefold()
-        if sender.casefold() not in sender_text:
-            return False
-    if subject and subject.casefold() not in str(email.get("subject") or "").casefold():
+    if not _sender_matches_filter(email, sender):
         return False
-    if folder and folder.casefold() not in str(email.get("folder") or "").casefold():
+    if not _text_field_matches_filter(email, "subject", subject):
         return False
-    if has_attachments is not None and bool(email.get("has_attachments")) != has_attachments:
+    if not _text_field_matches_filter(email, "folder", folder):
         return False
-    if email_type and str(email.get("email_type") or "") != email_type:
+    if not _metadata_matches_eval_filters(email, has_attachments=has_attachments, email_type=email_type):
         return False
     email_date = str(email.get("date") or "")[:10]
-    if date_from and email_date < date_from[:10]:
-        return False
-    return not (date_to and email_date > date_to[:10])
+    return _date_matches_eval_filters(email_date, date_from=date_from, date_to=date_to)
 
 
 class _SQLiteEvalRetriever:

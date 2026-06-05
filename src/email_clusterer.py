@@ -56,8 +56,7 @@ class EmailClusterer:
 
         # Ensure k <= n_samples
         k = min(k, len(embeddings))
-        if k < 2:
-            k = 2
+        k = max(k, 2)
 
         self._labels, self._centroids = self._fit_kmeans(embeddings, k, n_init=3)
         self._embeddings = embeddings
@@ -348,8 +347,7 @@ class EmailClusterer:
         if not self._is_fitted or len(self._embeddings) == 0:
             return []
 
-        if top_k < 1:
-            top_k = 1
+        top_k = max(top_k, 1)
 
         # Cosine similarity
         query_norm = embedding / (np.linalg.norm(embedding) + 1e-10)

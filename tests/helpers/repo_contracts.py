@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import subprocess  # nosec B404 — test helper, runs git/built-in tools with repo-relative paths; no user input
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 

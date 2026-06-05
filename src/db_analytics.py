@@ -271,8 +271,7 @@ class AnalyticsMixin:
         if len(sender_emails) < 2:
             return []
 
-        if min_shared < 1:
-            min_shared = 1
+        min_shared = max(min_shared, 1)
 
         placeholders = _sql_in_placeholders(sender_emails)
         query = (

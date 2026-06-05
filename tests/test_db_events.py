@@ -55,39 +55,39 @@ def _insert_email(db: EmailDatabase, uid: str = "uid1") -> None:
     db.conn.commit()
 
 
-def _row(  # pylint: disable=too-many-arguments,too-many-positional-arguments
-    key: str = "key1",
-    uid: str = "uid1",
-    kind: str = "absence",
-    source_scope: str = "email",
-    surface_scope: str = "body",
-    segment_ordinal: int | None = 0,
-    char_start: int | None = 10,
-    char_end: int | None = 30,
-    trigger_text: str = "was excluded",
-    event_date: str = "2024-03-01",
-    surface_hash: str = "aaa",
-    lang: str = "en",
-    confidence: float = 0.9,
-    extractor_version: str = "1.0",
-    provenance_json: str | None = None,
-) -> tuple[object, ...]:
+def _row(key: str = "key1", uid: str = "uid1", **overrides: object) -> tuple[object, ...]:
+    values = {
+        "kind": "absence",
+        "source_scope": "email",
+        "surface_scope": "body",
+        "segment_ordinal": 0,
+        "char_start": 10,
+        "char_end": 30,
+        "trigger_text": "was excluded",
+        "event_date": "2024-03-01",
+        "surface_hash": "aaa",
+        "lang": "en",
+        "confidence": 0.9,
+        "extractor_version": "1.0",
+        "provenance_json": None,
+    }
+    values.update(overrides)
     return (
         key,
         uid,
-        kind,
-        source_scope,
-        surface_scope,
-        segment_ordinal,
-        char_start,
-        char_end,
-        trigger_text,
-        event_date,
-        surface_hash,
-        lang,
-        confidence,
-        extractor_version,
-        provenance_json,
+        values["kind"],
+        values["source_scope"],
+        values["surface_scope"],
+        values["segment_ordinal"],
+        values["char_start"],
+        values["char_end"],
+        values["trigger_text"],
+        values["event_date"],
+        values["surface_hash"],
+        values["lang"],
+        values["confidence"],
+        values["extractor_version"],
+        values["provenance_json"],
     )
 
 

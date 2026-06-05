@@ -262,10 +262,8 @@ def list_emails_paginated_impl(
         sort_by, sort_order = _validate_order_by(sort_by, sort_order, allowed_columns=allowed_sort)
     except ValueError:
         sort_by, sort_order = "date", "DESC"
-    if offset < 0:
-        offset = 0
-    if limit < 1:
-        limit = 1
+    offset = max(offset, 0)
+    limit = max(limit, 1)
 
     params = _browse_filter_params(
         category=category,

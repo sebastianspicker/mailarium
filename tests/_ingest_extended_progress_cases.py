@@ -176,7 +176,7 @@ class TestAutoDownloadSpacyModels:
             assert mock_check.call_count == 2  # Two models
 
     def test_handles_download_failure(self, monkeypatch):
-        import subprocess  # nosec B404 — test helper, runs spacy via subprocess.check_call
+        import subprocess  # nosec B404
 
         monkeypatch.delenv("SPACY_AUTO_DOWNLOAD", raising=False)
         mock_spacy = MagicMock()

@@ -27,7 +27,7 @@ _EXPANSION_ERROR_SAMPLE_LIMIT = 8
 
 
 @dataclass(slots=True)
-class EnrichedRowIdentity:
+class EnrichedRowIdentity:  # pylint: disable=too-many-instance-attributes
     snippet: str = ""
     body_render_mode: str = "full"
     body_render_source: str = ""
@@ -291,6 +291,11 @@ def _build_enriched_row_identity(
         "harvest_round": int(entry.get("harvest_round") or 0),
     }
     row.update(_email_language_fields(identity.email_language_source or metadata))
+    _apply_optional_enriched_identity_fields(row, identity)
+    return row
+
+
+def _apply_optional_enriched_identity_fields(row: dict[str, Any], identity: EnrichedRowIdentity) -> None:
     if identity.recipients_summary is not None:
         row["recipients_summary"] = identity.recipients_summary
     if identity.speaker_attribution is not None:
@@ -303,7 +308,6 @@ def _build_enriched_row_identity(
         row.update(identity.thread_locator)
     if identity.extra_fields:
         row.update(identity.extra_fields)
-    return row
 
 
 def _expansion_error_entry(

@@ -392,8 +392,8 @@ def _extract_zip_archive(
     return None
 
 
-def _pdf_extractor(PdfReader, stream):
-    reader = PdfReader(stream)
+def _pdf_extractor(pdf_reader_cls, stream):
+    reader = pdf_reader_cls(stream)
     pages: list[str] = []
     for page_index, page in enumerate(reader.pages, start=1):
         page_text = page.extract_text()
@@ -402,8 +402,8 @@ def _pdf_extractor(PdfReader, stream):
     return "\n\n".join(pages).strip()
 
 
-def _docx_extractor(Document, stream):
-    doc = Document(stream)
+def _docx_extractor(document_cls, stream):
+    doc = document_cls(stream)
     paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
     return "\n".join(paragraphs).strip()
 
@@ -463,8 +463,8 @@ def _extract_legacy_binary_office(content: bytes, *, format_label: str) -> str |
     return _truncate(text)
 
 
-def _pptx_extractor(Presentation, stream):
-    prs = Presentation(stream)
+def _pptx_extractor(presentation_cls, stream):
+    prs = presentation_cls(stream)
     lines: list[str] = []
     for slide_num, slide in enumerate(prs.slides, 1):
         lines.append(f"[Slide {slide_num}]")

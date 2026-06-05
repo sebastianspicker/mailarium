@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-import subprocess  # nosec B404 — test utility, runs captured-artifact refresh via subprocess; no user input
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 

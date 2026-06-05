@@ -285,56 +285,9 @@ def test_build_comparative_treatment_reports_high_quality_comparator_with_proced
 
 def test_build_comparative_treatment_matches_stacked_prefix_subject_family() -> None:
     analysis = build_comparative_treatment(
-        case_bundle={
-            "scope": {
-                "target_person": {
-                    "email": "alex@example.com",
-                    "actor_id": "actor-target",
-                },
-                "comparator_actors": [
-                    {
-                        "email": "pat@example.com",
-                        "actor_id": "actor-comparator",
-                    }
-                ],
-            }
-        },
-        candidates=[
-            {
-                "uid": "u1",
-                "sender_actor_id": "actor-manager",
-                "thread_group_id": "",
-                "subject": "Re: Fwd: Status update",
-                "date": "2026-02-10T10:00:00",
-                "language_rhetoric": {"authored_text": {"signal_count": 2}},
-                "message_findings": {
-                    "authored_text": {
-                        "behavior_candidates": [
-                            {"behavior_id": "deadline_pressure"},
-                        ]
-                    }
-                },
-            },
-            {
-                "uid": "u2",
-                "sender_actor_id": "actor-manager",
-                "thread_group_id": "",
-                "subject": "Status update",
-                "date": "2026-02-10T11:00:00",
-                "language_rhetoric": {"authored_text": {"signal_count": 0}},
-                "message_findings": {
-                    "authored_text": {
-                        "behavior_candidates": [
-                            {"behavior_id": "deadline_pressure"},
-                        ]
-                    }
-                },
-            },
-        ],
-        full_map={
-            "u1": {"to": ["Alex Example <alex@example.com>"], "cc": [], "bcc": []},
-            "u2": {"to": ["Pat Peer <pat@example.com>"], "cc": [], "bcc": []},
-        },
+        case_bundle=_stacked_prefix_case_bundle(),
+        candidates=_stacked_prefix_candidates(),
+        full_map=_stacked_prefix_full_map(),
     )
 
     comparator = analysis["comparator_summaries"][0]
@@ -342,6 +295,65 @@ def test_build_comparative_treatment_matches_stacked_prefix_subject_family() -> 
     assert comparator["similarity_checks"]["shared_subject"] is True
     assert comparator["similarity_checks"]["shared_subject_families"] == ["status update"]
     assert "Target and comparator messages do not share a normalized subject line." not in comparator["uncertainty_reasons"]
+
+
+def _stacked_prefix_case_bundle() -> dict[str, object]:
+    return {
+        "scope": {
+            "target_person": {
+                "email": "alex@example.com",
+                "actor_id": "actor-target",
+            },
+            "comparator_actors": [
+                {
+                    "email": "pat@example.com",
+                    "actor_id": "actor-comparator",
+                }
+            ],
+        }
+    }
+
+
+def _stacked_prefix_candidates() -> list[dict[str, object]]:
+    return [
+        _stacked_prefix_candidate(
+            uid="u1",
+            subject="Re: Fwd: Status update",
+            date="2026-02-10T10:00:00",
+            signal_count=2,
+        ),
+        _stacked_prefix_candidate(
+            uid="u2",
+            subject="Status update",
+            date="2026-02-10T11:00:00",
+            signal_count=0,
+        ),
+    ]
+
+
+def _stacked_prefix_candidate(*, uid: str, subject: str, date: str, signal_count: int) -> dict[str, object]:
+    return {
+        "uid": uid,
+        "sender_actor_id": "actor-manager",
+        "thread_group_id": "",
+        "subject": subject,
+        "date": date,
+        "language_rhetoric": {"authored_text": {"signal_count": signal_count}},
+        "message_findings": {
+            "authored_text": {
+                "behavior_candidates": [
+                    {"behavior_id": "deadline_pressure"},
+                ]
+            }
+        },
+    }
+
+
+def _stacked_prefix_full_map() -> dict[str, dict[str, list[str]]]:
+    return {
+        "u1": {"to": ["Alex Example <alex@example.com>"], "cc": [], "bcc": []},
+        "u2": {"to": ["Pat Peer <pat@example.com>"], "cc": [], "bcc": []},
+    }
 
 
 def test_build_comparative_treatment_emits_review_facing_discovery_candidates() -> None:
