@@ -29,16 +29,13 @@ def test_acceptance_matrix_tracks_ci_contracts():
         "ruff format --check .",
         "mypy src",
         "pytest -q --tb=short --cov=src --cov-report=term-missing --cov-fail-under=80",
-        (
-            "python scripts/refresh_qa_eval_captured_reports.py --check --scenario legal_support "
-            "--scenario legal_support_full_pack_goldens"
-        ),
         "python scripts/wave_workflow_smoke.py",
         "bandit -r src -q -ll -ii",
         "python scripts/dependency_audit.py",
         "python scripts/streamlit_smoke.py",
     ]:
         assert check in ci
+    assert "python scripts/refresh_qa_eval_captured_reports.py --check" not in ci
 
     assert 'python_bin="${PYTHON_BIN:-}"' in acceptance
     assert 'if [[ -x ".venv/bin/python" ]]; then' in acceptance
