@@ -1,8 +1,6 @@
 """Proof dossier generator for legal evidence export."""
 # pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
 
-
-
 from __future__ import annotations
 
 import hashlib
@@ -177,7 +175,8 @@ class DossierGenerator:
         if evidence_uids:
             ph = _sql_in_placeholders(evidence_uids)
             rows = self._db.conn.execute(
-                f"SELECT uid, thread_topic FROM emails WHERE uid IN ({ph})",  # B608 — placeholders are ? markers, values bound as params
+                # B608 — placeholders are ? markers, values bound as params.
+                f"SELECT uid, thread_topic FROM emails WHERE uid IN ({ph})",
                 evidence_uids,
             ).fetchall()
             thread_topics = {r["uid"]: r["thread_topic"] or "" for r in rows}

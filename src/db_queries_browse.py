@@ -1,8 +1,6 @@
 """Browse and full-retrieval helpers for ``QueryMixin``."""
 # pylint: disable=too-many-arguments,too-many-locals
 
-
-
 from __future__ import annotations
 
 import json
@@ -103,7 +101,8 @@ def recipients_for_uids_impl(db: Any, uids: list[str]) -> dict[str, dict[str, li
         batch = uids[start : start + batch_size]
         placeholders = _sql_in_placeholders(batch)
         rows = db.conn.execute(
-            f"SELECT address, display_name, type, email_uid FROM recipients WHERE email_uid IN ({placeholders})",  # B608 — placeholders are ? markers
+            # B608 — placeholders are ? markers.
+            f"SELECT address, display_name, type, email_uid FROM recipients WHERE email_uid IN ({placeholders})",
             batch,
         ).fetchall()
         for row in rows:
@@ -252,7 +251,8 @@ def list_emails_paginated_impl(
     total = total_row["c"]
 
     rows = db.conn.execute(
-        "SELECT emails.uid, subject, sender_name, sender_email, date, folder,"  # B608 — validated sort column/direction, bound params
+        # B608 — validated sort column/direction, bound params.
+        "SELECT emails.uid, subject, sender_name, sender_email, date, folder,"
         " email_type, has_attachments, attachment_count, body_length,"
         " conversation_id"
         f" FROM emails{join}{where}"

@@ -1,8 +1,6 @@
 """Core helpers for the lightweight language detector."""
 # pylint: disable=too-many-return-statements
 
-
-
 from __future__ import annotations
 
 from collections import Counter
@@ -93,7 +91,12 @@ def detect_language_details_impl(text: str) -> dict[str, str | float | int]:
     tokens = tokenize_impl(text)
     token_count = len(tokens)
     if token_count == 0:
-        return {"language": "unknown", "confidence": "none", "reason": "empty_text", "token_count": 0}  # dict literal, not a secret
+        return {
+            "language": "unknown",
+            "confidence": "none",
+            "reason": "empty_text",
+            "token_count": 0,
+        }
 
     scores = score_languages_impl(tokens, original_text=text)
     ranked_scores = sorted(scores.items(), key=lambda item: item[1], reverse=True)

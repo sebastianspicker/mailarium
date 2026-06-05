@@ -1,8 +1,6 @@
 """Read/query helpers for evidence management."""
 # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements
 
-
-
 from __future__ import annotations
 
 import json
@@ -338,7 +336,8 @@ def list_evidence_impl(
     total = total_row["c"]
 
     rows = db.conn.execute(
-        f"SELECT * FROM evidence_items{where} ORDER BY date ASC LIMIT ? OFFSET ?",  # B608 — parameterised query, values bound with ? placeholders
+        # B608 — parameterised query, values bound with ? placeholders.
+        f"SELECT * FROM evidence_items{where} ORDER BY date ASC LIMIT ? OFFSET ?",
         [*params, limit, offset],
     ).fetchall()
 
@@ -460,18 +459,21 @@ def evidence_stats_impl(
     total = total_row["c"]
 
     verified_row = db.conn.execute(
-        f"SELECT COUNT(*) AS c FROM evidence_items{where_sql} {'AND' if where_manageres else 'WHERE'} verified = 1",  # B608 — parameterised query, values bound with ? placeholders
+        # B608 — parameterised query, values bound with ? placeholders.
+        f"SELECT COUNT(*) AS c FROM evidence_items{where_sql} {'AND' if where_manageres else 'WHERE'} verified = 1",
         params,
     ).fetchone()
     verified = verified_row["c"]
 
     cat_rows = db.conn.execute(
-        f"SELECT category, COUNT(*) AS count FROM evidence_items{where_sql} GROUP BY category ORDER BY count DESC",  # B608 — parameterised query, values bound with ? placeholders
+        # B608 — parameterised query, values bound with ? placeholders.
+        f"SELECT category, COUNT(*) AS count FROM evidence_items{where_sql} GROUP BY category ORDER BY count DESC",
         params,
     ).fetchall()
 
     rel_rows = db.conn.execute(
-        f"SELECT relevance, COUNT(*) AS count FROM evidence_items{where_sql} GROUP BY relevance ORDER BY relevance DESC",  # B608 — parameterised query, values bound with ? placeholders
+        # B608 — parameterised query, values bound with ? placeholders.
+        f"SELECT relevance, COUNT(*) AS count FROM evidence_items{where_sql} GROUP BY relevance ORDER BY relevance DESC",
         params,
     ).fetchall()
 
@@ -566,7 +568,8 @@ def search_evidence_impl(
     ).fetchone()
 
     rows = db.conn.execute(
-        f"SELECT * FROM evidence_items{where} ORDER BY date ASC LIMIT ?",  # B608 — parameterised query, values bound with ? placeholders
+        # B608 — parameterised query, values bound with ? placeholders.
+        f"SELECT * FROM evidence_items{where} ORDER BY date ASC LIMIT ?",
         [*params, limit],
     ).fetchall()
 
@@ -598,7 +601,8 @@ def evidence_timeline_impl(
 
     where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
 
-    sql = f"SELECT * FROM evidence_items{where} ORDER BY date ASC"  # B608 — `where` is built from hardcoded condition strings; all values are bound as params
+    # B608 — `where` is built from hardcoded condition strings; all values are bound as params.
+    sql = f"SELECT * FROM evidence_items{where} ORDER BY date ASC"
     if limit is not None and limit >= 0:
         sql += " LIMIT ?"
         params.append(limit)
