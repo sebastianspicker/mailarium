@@ -107,6 +107,9 @@ ignore = [
     "RUF003",  # ambiguous-unicode-comment
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/test_qa_eval_scoring.py" = ["F401"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
