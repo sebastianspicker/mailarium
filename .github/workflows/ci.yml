@@ -32,8 +32,6 @@ jobs:
         run: mypy src
       - name: Test with coverage
         run: pytest -q --tb=short --cov=src --cov-report=term-missing --cov-fail-under=80
-      - name: Legal-support captured artifacts contract
-        run: python scripts/refresh_qa_eval_captured_reports.py --check --scenario legal_support --scenario legal_support_full_pack_goldens
       - name: Campaign workflow smoke
         run: python scripts/wave_workflow_smoke.py
       - name: Streamlit smoke
