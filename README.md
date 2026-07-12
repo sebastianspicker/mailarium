@@ -19,7 +19,7 @@ You export your mailbox from Outlook for Mac once, index it locally, and then us
 
 Typical questions and tasks:
 
-- *"Find emails about the Q3 budget from finance@example.test"*
+- *"Find emails about the Q3 budget from `finance@example.test`"*
 - *"Summarize the thread about the server migration"*
 - *"Show me my top contacts and communication patterns"*
 - *"Export the conversation about the contract renewal as a PDF"*

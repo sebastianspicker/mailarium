@@ -54,6 +54,7 @@ docs/agent/qa_eval_captured_refresh.md
 docs/agent/codacy_*.md
 docs/agent/*_status_*.md
 docs/agent/*_ledger.md
+docs/agent/REMEDIATION_LEDGER_*.md
 
 # Stale planning and progress artifacts
 /plans/

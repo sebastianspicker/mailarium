@@ -17,7 +17,7 @@ Canonical execution documents:
 Archive and history surfaces:
 
 - `docs/agent/matter_analysis/` for supporting phase maps, heuristics, and operations detail
-- `docs/agent/deprecated/` for archived audit-era docs and deprecated path shims
+- `docs/archive/2026-05-16-remediation-closure/agent-deprecated/deprecated/` for archived audit-era docs and deprecated path shims
 - `docs/agent/implementation_log/` for chronological change logs
 - `docs/agent/plan_history/` for preserved planning-program history
 

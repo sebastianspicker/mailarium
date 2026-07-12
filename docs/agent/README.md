@@ -36,7 +36,11 @@ All checked-in examples in this subtree must remain synthetic. Do not add person
 
 ## Archive Material
 
-- [`deprecated/`](deprecated/) preserves audit-era docs and path shims as historical context.
-- `implementation_log/`, `plan_history/`, and `matter_analysis/` are ignored local work areas unless explicitly promoted.
+- [`../archive/2026-05-16-remediation-closure/agent-deprecated/deprecated/`](../archive/2026-05-16-remediation-closure/agent-deprecated/deprecated/)
+  preserves audit-era docs and path shims as historical context.
+- `archive/`, `implementation_log/`, `plan_history/`, and `matter_analysis/`
+  are ignored local work areas unless explicitly promoted. Keep local status,
+  ledger, Codacy, and remediation snapshots there when they include local paths
+  or dirty-checkout evidence.
 
 `Documentation.md` is a verification/change log, not the public docs map.
