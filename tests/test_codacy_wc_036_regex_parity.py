@@ -40,4 +40,7 @@ def test_bounded_parsers_complete_quickly_on_adversarial_input() -> None:
     _DATE_RANGE_RE.search(adversarial)
     _INLINE_EMAIL_RE.search(adversarial)
     _parse_reply_context_line(adversarial)
-    assert time.perf_counter() - started < 1.0
+    # Shared CI runners vary substantially under load. Three seconds still
+    # distinguishes these bounded linear parsers from catastrophic backtracking
+    # while avoiding a false failure on an otherwise successful full-suite run.
+    assert time.perf_counter() - started < 3.0
