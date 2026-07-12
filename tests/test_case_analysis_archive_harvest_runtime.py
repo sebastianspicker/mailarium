@@ -7,7 +7,6 @@ from src.case_analysis import (
     build_case_analysis_payload,
     derive_case_analysis_query,
 )
-from src.case_analysis_harvest import build_archive_harvest_bundle
 from src.mcp_models import EmailCaseAnalysisInput
 from src.question_execution_waves import derive_wave_query_lane_specs
 
