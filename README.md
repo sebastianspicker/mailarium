@@ -184,6 +184,10 @@ The current pages are Search, Overview, People, Connections, Evidence, and
 Mailbox. The images below are synthetic 1440 by 900 documentation captures
 from maintained HTML fixtures, not live Streamlit sessions.
 
+[Open the static, simulated product demo](https://sebastianspicker.github.io/mailarium/).
+It uses synthetic fixture data and does not connect to a mailbox or Mailarium
+runtime.
+
 ![Search interface](docs/screenshots/streamlit-search-ui.png)
 
 ![Archive overview](docs/screenshots/streamlit-dashboard-ui.png)
