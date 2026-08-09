@@ -140,3 +140,8 @@ service_account.json
 
 # Opaque local snapshots retained for manual review.
 /archive/local/
+/.repowise/
+/.mcp.json
+/AUDIT_LEDGER.md
+/work-in-progress/
+/wip/
