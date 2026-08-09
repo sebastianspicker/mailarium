@@ -48,6 +48,7 @@ bandit-report.*
 # Local tool state and internal work artifacts
 .agents/
 .codex/
+/.cursor/
 .kilo/
 AGENTS.md
 HARNESS_PRINCIPLES.md
