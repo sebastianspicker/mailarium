@@ -168,6 +168,39 @@ def test_search_by_thread_delegates_to_extracted_helper(monkeypatch):
     assert calls == [("conv-1", 7)]
 
 
+def test_image_results_from_payload_preserves_complete_aligned_rows():
+    payload = {
+        "ids": [["image-1", "image-2"]],
+        "documents": [["first image", "second image"]],
+        "metadatas": [[{"uid": "u1", "retrieval_space": "text"}, {"uid": "u2"}]],
+        "distances": [["0.125", 0.75]],
+    }
+
+    results = EmailRetriever._image_results_from_payload(payload)
+
+    assert results == [
+        SearchResult("image-1", "first image", {"uid": "u1", "retrieval_space": "image"}, 0.125),
+        SearchResult("image-2", "second image", {"uid": "u2", "retrieval_space": "image"}, 0.75),
+    ]
+
+
+def test_image_results_from_payload_preserves_ragged_array_defaults():
+    payload = {
+        "ids": [["image-1", "image-2", "image-3"]],
+        "documents": [["first image"]],
+        "metadatas": [[{"uid": "u1", "retrieval_space": "text"}]],
+        "distances": [["0.25", 0.5]],
+    }
+
+    results = EmailRetriever._image_results_from_payload(payload)
+
+    assert results == [
+        SearchResult("image-1", "first image", {"uid": "u1", "retrieval_space": "image"}, 0.25),
+        SearchResult("image-2", "", {"retrieval_space": "image"}, 0.5),
+        SearchResult("image-3", "", {"retrieval_space": "image"}, 1.0),
+    ]
+
+
 def test_list_senders_and_stats_delegate_to_extracted_helpers(monkeypatch):
     """Administrative metadata surfaces should keep delegating through the stable seam."""
     retriever = _bare_retriever()

@@ -219,6 +219,54 @@ class TestResponseTimes:
         result = analyzer.response_times()
         assert result == []
 
+    def test_response_times_preserve_fetch_limit_order_and_rounding(self):
+        class ResponsePairsDatabase:
+            def __init__(self):
+                self.calls = []
+
+            def response_pairs(self, *, sender, limit):
+                self.calls.append((sender, limit))
+                return [
+                    {
+                        "reply_date": "2024-01-15T02:00:00",
+                        "original_date": "2024-01-15T00:00:00",
+                        "reply_sender": "alice@example.com",
+                    },
+                    {
+                        "reply_date": "2024-01-15T03:00:00",
+                        "original_date": "2024-01-15T00:00:00",
+                        "reply_sender": "alice@example.com",
+                    },
+                    {
+                        "reply_date": "2024-01-15T01:04:00",
+                        "original_date": "2024-01-15T00:00:00",
+                        "reply_sender": "bob@example.com",
+                    },
+                ]
+
+        db = ResponsePairsDatabase()
+        analyzer = TemporalAnalyzer(db)  # type: ignore[arg-type]
+
+        result = analyzer.response_times(sender="team@example.com")
+
+        assert db.calls == [("team@example.com", 500)]
+        assert result == [
+            {
+                "replier": "alice@example.com",
+                "avg_response_hours": 2.5,
+                "response_count": 2,
+                "response_sample_scope": "recent_canonical_reply_pairs",
+                "response_sample_pair_limit": 500,
+            },
+            {
+                "replier": "bob@example.com",
+                "avg_response_hours": 1.1,
+                "response_count": 1,
+                "response_sample_scope": "recent_canonical_reply_pairs",
+                "response_sample_pair_limit": 500,
+            },
+        ]
+
     def test_response_times_empty(self):
         db = EmailDatabase(":memory:")
         analyzer = TemporalAnalyzer(db)

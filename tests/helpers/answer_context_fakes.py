@@ -44,3 +44,11 @@ class _AnswerContextDeps:
     def idempotent_write_annotations(title: str):
         """Return stable idempotent-write annotations for test-only tool calls."""
         return {"title": title}
+
+
+async def _run_answer_context_json(monkeypatch, *, retriever, db, params):
+    """Run the public answer-context entrypoint with injected dependencies."""
+    import mailarium.tools.search as search_mod
+
+    monkeypatch.setattr(search_mod, "_deps", _AnswerContextDeps(retriever, db))
+    return json.loads(await search_mod.email_answer_context(params))
