@@ -28,9 +28,9 @@ def test_reingest_bodies_wrapper_delegates_to_reingest_module() -> None:
 
 def test_reembed_wrapper_delegates_to_reingest_module() -> None:
     with patch("mailarium.ingest_reingest.reembed_impl", return_value={"message": "done"}) as mock_impl:
-        result = ingest_mod.reembed(vector_index_path="vector-index", sqlite_path="db.sqlite", batch_size=12)
+        result = ingest_mod.reembed(vector_index_path="vector-index", sqlite_path="db.sqlite", batch_size=12, resume=True)
     assert result["message"] == "done"
-    mock_impl.assert_called_once_with(vector_index_path="vector-index", sqlite_path="db.sqlite", batch_size=12)
+    mock_impl.assert_called_once_with(vector_index_path="vector-index", sqlite_path="db.sqlite", batch_size=12, resume=True)
 
 
 def test_reset_index_wrapper_delegates_to_reingest_module() -> None:

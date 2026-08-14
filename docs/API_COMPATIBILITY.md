@@ -37,6 +37,62 @@ The `0.5.0a1` Mailarium rebrand is an intentional hard cutover:
 The canonical GitHub repository URL intentionally remains
 `sebastianspicker/outlook-email-rag`.
 
+## Governing 0.5 Retirement Decision
+
+Status: accepted for the `0.5.0a1` candidate design. This decision does not
+make the current dirty tree publishable; the exact frozen candidate must still
+pass every gate in `RELEASING.md` and both configured CI jobs.
+
+The supported product is the general local mailbox archive described under
+Supported Surfaces. The former case, matter, investigation, behavioral, and
+legal-support code was a domain-specific compatibility pack layered over that
+archive. Keeping it in 0.5 would advertise specialized schemas, tools, reports,
+and workflows that are no longer part of the supported product contract.
+
+The current retirement inventory has these explicit dispositions:
+
+- Move and retain: 169 of the 299 deleted `src/` entries have a live
+  same-relative-path implementation under `mailarium/`. Their supported public
+  entry points move to the `mailarium` namespace.
+- Retire: the other 130 `src/` entries have no `mailarium/` counterpart. They
+  comprise 51 case-analysis and orchestration entries; 28 matter,
+  investigation, chronology, and report entries; 20 legal and employment
+  support entries; 27 behavioral, comparative, and rhetoric-analysis entries;
+  and 4 legacy CLI or model-backend compatibility entries.
+- Retire verification material with the retired product: 145 deleted test
+  paths comprise 96 top-level legacy tests, 9 case-workflow tests, 39
+  full-pack fixture files, and 1 case-analysis fixture helper.
+- Retire internal working material: all 97 deleted `docs/agent/` paths are
+  non-public agent and evaluation material. They are not product documentation
+  or a supported runtime input.
+- Retire coupled helpers: `scripts/prepare_case_inputs.py` and
+  `scripts/wave_workflow_smoke.py` depend on the removed domain pack;
+  `sitecustomize.py` only enabled the removed FlagEmbedding compatibility
+  shim; and `scripts/topology_inventory.sh` only produced historical audit
+  notes that referenced the retired internal documentation tree.
+
+This is a hard retirement, not a hidden compatibility mode. Mailarium does not
+load the deleted modules, translate their request or response schemas, retain
+their CLI routes or MCP tools, or migrate their derived case-workspace data.
+The original mailbox and attachment sources remain the recovery authority for
+the supported archive. Operators who need a retired domain workflow must keep
+its exports and a backup of its pre-0.5 runtime state before upgrading.
+
+Rollback is version rollback, not an in-place schema downgrade: stop all
+Mailarium processes, preserve the original mailbox sources and runtime backup,
+and restore the pre-0.5 application and its matching runtime state in a
+separate environment. Do not point a pre-0.5 process at a runtime already
+advanced by 0.5. Re-entering 0.5 requires a fresh archive or a separately
+verified migration.
+
+`tests/test_repo_contracts_docs.py` pins this decision and
+`tests/test_repo_contracts_public_surface.py` checks representative removed
+paths and the publication boundary. Before the retirement is integrated, the
+latter contract must be included in the frozen candidate, the complete deleted
+path inventory must be reviewed again, and the source, test, coverage,
+security, privacy, artifact, installed-wheel, and offline EWS gates must pass.
+Live EWS interoperability remains a separately disclosed release limitation.
+
 ## Earlier 0.4 Breaks
 
 The following compatibility surfaces were removed:

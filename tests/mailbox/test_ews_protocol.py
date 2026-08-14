@@ -26,6 +26,13 @@ class EWSProtocolTests(unittest.TestCase):
         self.assertEqual((EWSItemRef("read-item", "read-ck"),), delta.updated)
         self.assertEqual(1, delta.raw_change_count)
 
+    def test_meeting_response_sync_change_is_a_supported_mail_item(self) -> None:
+        delta = EWSGateway(_FixtureTransport("sync_folder_items_meeting_response.xml")).sync_folder_items("inbox")
+
+        self.assertEqual((EWSItemRef("meeting-response", "response-ck"),), delta.created)
+        self.assertEqual((EWSItemRef("meeting-request", "request-ck"),), delta.updated)
+        self.assertEqual(2, delta.raw_change_count)
+
     def test_non_message_sync_change_fails_closed(self) -> None:
         with self.assertRaisesRegex(EWSFaultError, "supported message identity"):
             EWSGateway(_FixtureTransport("sync_folder_items_unsupported.xml")).sync_folder_items("inbox")

@@ -13,6 +13,16 @@ class _FakeModel:
         return [np.random.RandomState(hash(text) % 2**31).randn(8).astype(np.float32).tolist() for text in texts]
 
 
+class _FixedLaneModel:
+    def encode_dense(self, texts):
+        vectors = {
+            "project": [1.0, 0.0],
+            "alpha": [0.9, 0.0],
+            "beta": [0.8, 0.0],
+        }
+        return [vectors[text] for text in texts]
+
+
 def test_expansion_uses_corpus_terms_for_every_scope() -> None:
     expander = QueryExpander(model=_FakeModel(), vocabulary=["calendar invite", "budget forecast", "project handover"])
 
@@ -28,6 +38,14 @@ def test_lane_expansion_keeps_original_and_ascii_variant() -> None:
     lanes = expander.expand_lanes("Überprüfung", max_lanes=4, scope="customer support")
 
     assert lanes == ["Überprüfung", "Ueberpruefung"]
+
+
+def test_lane_expansion_truncates_related_terms() -> None:
+    expander = QueryExpander(model=_FixedLaneModel(), vocabulary=["project", "alpha", "beta"])
+
+    lanes = expander.expand_lanes("project", n_terms=1, max_lanes=3)
+
+    assert lanes == ["project", "project alpha"]
 
 
 def test_empty_or_unconfigured_expansion_is_unchanged() -> None:

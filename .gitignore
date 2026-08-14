@@ -116,10 +116,18 @@ scripts/reverify_evidence_sources.py
 .env
 .env.*
 !.env.example
+!.env.*.example
+!.env.sample
+!.env.template
+secrets.local.*
+credentials.local.*
+.npmrc.local
 *.pem
 *.key
 *.p12
 *.pfx
+*.jks
+*.keystore
 *.crt
 *.cer
 credentials.json
@@ -136,5 +144,25 @@ service_account.json
 # Local examples/scratch
 /.example/
 
+# Nested local tooling and generated artifacts
+.repowise/
+.claude/
+.cursor/
+node_modules/
+target/
+.build/
+DerivedData/
+xcuserdata/
+coverage/
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+
 # Opaque local snapshots retained for manual review.
 /archive/local/
+
+# Root-local audit metadata
+/CLAUDE.md
+/GEMINI.md
+/AUDIT_LEDGER.md

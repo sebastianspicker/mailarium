@@ -329,7 +329,11 @@ def test_delete_sparse_by_uid():
 
 def test_get_email_for_reembed_returns_dict():
     db = EmailDatabase(":memory:")
-    email = make_email(body_text="Hello world")
+    email = make_email(
+        body_text="Hello world",
+        forensic_body_text="Hello world\n\nOn Monday Alice wrote:\n> Historical context",
+        forensic_body_source="ews_raw_body_text",
+    )
     db.insert_email(email)
 
     result = db.get_email_for_reembed(email.uid)
@@ -338,4 +342,6 @@ def test_get_email_for_reembed_returns_dict():
     assert result["body"] == "Hello world"
     assert result["subject"] == email.subject
     assert result["email_type"] == "original"
+    assert result["forensic_body_text"].endswith("> Historical context")
+    assert result["forensic_body_source"] == "ews_raw_body_text"
     db.close()

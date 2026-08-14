@@ -14,7 +14,7 @@ from typing import Any, get_type_hints
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def _run_repo_contract_command(command: list[str]) -> subprocess.CompletedProcess[str]:
+def _run_repo_contract_command(command: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
     """Run only Git or the active Python interpreter inside the repository, capturing output."""
     if not command:
         raise ValueError("empty command")
@@ -22,7 +22,7 @@ def _run_repo_contract_command(command: list[str]) -> subprocess.CompletedProces
         raise ValueError(f"unsupported repo-contract command: {command[0]!r}")
     return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
         command,
-        check=True,
+        check=check,
         capture_output=True,
         cwd=REPO_ROOT,
         text=True,

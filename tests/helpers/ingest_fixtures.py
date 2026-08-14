@@ -192,6 +192,12 @@ def _make_reembed_embedder(
 
     class _Reembedder:
         def __init__(self, **_kw):
+            from types import SimpleNamespace
+
+            from mailarium.config import DEFAULT_EMBEDDING_MODEL, DEFAULT_EMBEDDING_MODEL_REVISION
+
+            self.model_name = DEFAULT_EMBEDDING_MODEL
+            self.settings = SimpleNamespace(embedding_model_revision=DEFAULT_EMBEDDING_MODEL_REVISION)
             self.collection = type(
                 "Collection",
                 (),

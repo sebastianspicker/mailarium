@@ -45,6 +45,15 @@ def test_short_text_returns_unknown():
     assert detect_language("") == "unknown"
 
 
+def test_empty_normalized_text_has_stable_details() -> None:
+    assert detect_language_details("RE: FWD: !!!") == {
+        "language": "unknown",
+        "confidence": "none",
+        "reason": "empty_text",
+        "token_count": 0,
+    }
+
+
 def test_short_german_text_can_return_low_confidence_german() -> None:
     details = detect_language_details("zur Prüfung")
 
@@ -63,6 +72,22 @@ def test_short_text_without_signal_reports_reason_metadata() -> None:
     assert details["token_count"] == 1
 
 
+def test_short_text_with_tied_scores_reports_insufficient_signal(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "mailarium.language_detector_core.score_languages_impl",
+        lambda tokens, *, original_text="": {"en": 0.5, "fr": 0.5},
+    )
+
+    details = detect_language_details("alpha beta")
+
+    assert details == {
+        "language": "unknown",
+        "confidence": "none",
+        "reason": "short_text_insufficient_signal",
+        "token_count": 2,
+    }
+
+
 def test_forwarded_german_subject_uses_marker_bias() -> None:
     details = detect_language_details("WG: Bitte um Rückmeldung zum Protokoll")
 
@@ -76,6 +101,45 @@ def test_adjusted_scores_can_override_raw_stopword_hit_leader() -> None:
 
     assert details["language"] == "de"
     assert details["reason"] == "stopword_overlap_with_markers"
+
+
+def test_low_score_threshold_is_exclusive(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "mailarium.language_detector_core.score_languages_impl",
+        lambda tokens, *, original_text="": {"en": 0.019},
+    )
+    assert detect_language_details("alpha bravo charlie delta echo") == {
+        "language": "unknown",
+        "confidence": "none",
+        "reason": "score_below_threshold",
+        "token_count": 5,
+    }
+
+    monkeypatch.setattr(
+        "mailarium.language_detector_core.score_languages_impl",
+        lambda tokens, *, original_text="": {"en": 0.02},
+    )
+    assert detect_language_details("alpha bravo charlie delta echo") == {
+        "language": "en",
+        "confidence": "medium",
+        "reason": "stopword_overlap",
+        "token_count": 5,
+        "score": 0.02,
+    }
+
+
+def test_confident_score_threshold_is_inclusive(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "mailarium.language_detector_core.score_languages_impl",
+        lambda tokens, *, original_text="": {"en": 0.079},
+    )
+    assert detect_language_details("alpha bravo charlie delta echo")["confidence"] == "medium"
+
+    monkeypatch.setattr(
+        "mailarium.language_detector_core.score_languages_impl",
+        lambda tokens, *, original_text="": {"en": 0.08},
+    )
+    assert detect_language_details("alpha bravo charlie delta echo")["confidence"] == "high"
 
 
 def test_gibberish_returns_unknown():

@@ -17,6 +17,50 @@ from mailarium.attachment_extractor import (
 
 
 class TestOptionalExtract:
+    def test_failure_recorder_accepts_positional_argument(self) -> None:
+        reasons: list[str] = []
+
+        result = _optional_extract(
+            b"content",
+            "nonexistent_module",
+            "SomeClass",
+            lambda _obj, _stream: "text",
+            "TEST",
+            reasons.append,
+        )
+
+        assert result is None
+        assert reasons == ["dependency_missing:nonexistent_module"]
+
+    def test_failure_recorder_keeps_missing_dependency_and_extraction_error_reasons(self) -> None:
+        dependency_reasons: list[str] = []
+        extraction_reasons: list[str] = []
+
+        def fail_extraction(_obj, _stream):
+            raise RuntimeError("extraction failed")
+
+        missing_result = _optional_extract(
+            b"content",
+            "nonexistent_module",
+            "SomeClass",
+            lambda _obj, _stream: "text",
+            "TEST",
+            failure_recorder=dependency_reasons.append,
+        )
+        failed_result = _optional_extract(
+            b"content",
+            "os",
+            "path",
+            fail_extraction,
+            "TEST",
+            failure_recorder=extraction_reasons.append,
+        )
+
+        assert missing_result is None
+        assert dependency_reasons == ["dependency_missing:nonexistent_module"]
+        assert failed_result is None
+        assert extraction_reasons == ["text_extraction_failed:TEST:RuntimeError"]
+
     def test_import_error_returns_none(self) -> None:
         real_import = builtins.__import__
 

@@ -1,6 +1,8 @@
 """Verifies inferred threading links messages to plausible parents using header and subject signals."""
 
-from mailarium.thread_inference import infer_parent_candidate
+from datetime import UTC, datetime
+
+from mailarium.thread_inference import _parse_dt, infer_parent_candidate
 
 from .helpers.email_db_builders import make_inferred_parent_email, make_inferred_reply_email
 
@@ -32,6 +34,10 @@ def test_infer_parent_candidate_handles_aware_child_and_naive_parent_dates():
 
     assert match is not None
     assert match.parent_uid == parent.uid
+
+
+def test_parse_dt_falls_back_to_rfc_2822_and_normalizes_to_naive_utc():
+    assert _parse_dt("Mon, 15 Jan 2024 10:30:00 +0100") == datetime(2024, 1, 15, 9, 30, tzinfo=UTC).replace(tzinfo=None)
 
 
 def test_infer_parent_candidate_returns_none_for_ambiguous_matches():

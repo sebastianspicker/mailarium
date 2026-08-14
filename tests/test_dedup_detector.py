@@ -106,3 +106,29 @@ def test_find_duplicates_skips_short_bodies():
     detector = DuplicateDetector(db)
     dupes = detector.find_duplicates()
     assert len(dupes) == 0  # Bodies too short (<20 chars)
+
+
+def test_find_duplicates_requires_more_than_twenty_characters_and_includes_threshold():
+    db = MagicMock()
+    body = "x" * 21
+    db.emails_by_base_subject.return_value = [
+        (
+            "Test",
+            [
+                ("too-short", "x" * 20),
+                ("first-match", body),
+                ("second-match", body),
+            ],
+        ),
+    ]
+
+    duplicates = DuplicateDetector(db, threshold=1.0).find_duplicates()
+
+    assert duplicates == [
+        {
+            "uid_a": "first-match",
+            "uid_b": "second-match",
+            "similarity": 1.0,
+            "subject": "Test",
+        }
+    ]

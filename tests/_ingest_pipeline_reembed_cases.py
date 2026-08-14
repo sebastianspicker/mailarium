@@ -4,6 +4,7 @@
 
 import pytest
 from types import SimpleNamespace
+from typing import ClassVar
 
 
 from .helpers.ingest_fixtures import _make_mock_email, _make_reembed_embedder, _seed_ingest_database
@@ -87,6 +88,188 @@ def test_reembed_rechunks_and_upserts(monkeypatch, tmp_path):
     assert result["chunks_added"] == len(upserted_chunks)
     assert result["skipped_no_body"] == 0
     assert len(upserted_chunks) >= 2  # At least 1 chunk per email
+
+
+def test_reembed_batches_small_emails_across_model_calls(monkeypatch, tmp_path):
+    """Small messages share bounded upsert calls instead of encoding one email at a time."""
+    from mailarium.chunker import EmailChunk
+
+    emails = [_make_mock_email(index) for index in range(1, 4)]
+    ingest_mod, sqlite_file = _seed_ingest_database(
+        monkeypatch,
+        tmp_path,
+        emails,
+        chunk_email=lambda email: [
+            EmailChunk(
+                uid=email.get("uid", "x"),
+                chunk_id=f"{email.get('uid', 'x')}__0",
+                text="replacement",
+                metadata={},
+            )
+        ],
+    )
+    upsert_calls = []
+    monkeypatch.setattr(
+        "mailarium.chunker.chunk_email",
+        lambda email: [
+            EmailChunk(
+                uid=email.get("uid", "x"),
+                chunk_id=f"{email.get('uid', 'x')}__0",
+                text="replacement",
+                metadata={},
+            )
+        ],
+    )
+    monkeypatch.setattr(
+        "mailarium.embedder.EmailEmbedder",
+        _make_reembed_embedder(upsert_calls=upsert_calls),
+    )
+
+    result = ingest_mod.reembed(sqlite_path=sqlite_file, batch_size=2)
+
+    expected_ids = sorted(f"{email.uid}__0" for email in emails)
+    assert upsert_calls == [expected_ids[:2], expected_ids[2:]]
+    assert result["chunks_added"] == 3
+    assert result["reembedded"] == 3
+
+
+def test_reembed_resume_skips_matching_content_and_model_provenance(monkeypatch, tmp_path):
+    """Resume mode avoids recomputing a fully committed body-vector projection."""
+    import hashlib
+
+    from mailarium.chunker import EmailChunk
+    from mailarium.config import DEFAULT_EMBEDDING_MODEL, DEFAULT_EMBEDDING_MODEL_REVISION
+    from mailarium.email_db import EmailDatabase
+
+    emails = [_make_mock_email(1)]
+    ingest_mod, sqlite_file = _seed_ingest_database(monkeypatch, tmp_path, emails)
+    chunk_id = f"{emails[0].uid}__0"
+    document = "replacement"
+    db = EmailDatabase(sqlite_file)
+    db.conn.execute(
+        "INSERT INTO vector_chunks(chunk_id,email_uid,embedding_space,kind,document,metadata_json,"
+        "content_sha256,model_id,model_revision) VALUES(?,?,?,?,?,?,?,?,?)",
+        (
+            chunk_id,
+            emails[0].uid,
+            "text",
+            "email_body",
+            document,
+            "{}",
+            hashlib.sha256(document.encode()).hexdigest(),
+            DEFAULT_EMBEDDING_MODEL,
+            DEFAULT_EMBEDDING_MODEL_REVISION,
+        ),
+    )
+    db.conn.commit()
+    db.close()
+    monkeypatch.setattr(
+        "mailarium.chunker.chunk_email",
+        lambda email: [EmailChunk(uid=email["uid"], chunk_id=chunk_id, text=document, metadata={})],
+    )
+    received_chunks = []
+    monkeypatch.setattr(
+        "mailarium.embedder.EmailEmbedder",
+        _make_reembed_embedder(existing_ids={chunk_id}, received_chunks=received_chunks),
+    )
+
+    result = ingest_mod.reembed(sqlite_path=sqlite_file, resume=True)
+
+    assert result["reembedded"] == 0
+    assert result["resumed"] == 1
+    assert received_chunks == []
+
+
+def test_reembed_restores_large_email_when_a_later_bounded_batch_fails(monkeypatch, tmp_path):  # noqa: C901
+    """A failure after an earlier capped batch restores that email's prior vectors."""
+    from mailarium.chunker import EmailChunk
+
+    emails = [_make_mock_email(1)]
+    ingest_mod, sqlite_file = _seed_ingest_database(
+        monkeypatch,
+        tmp_path,
+        emails,
+        chunk_email=lambda email: [
+            EmailChunk(
+                uid=email.get("uid", "x"),
+                chunk_id=f"{email.get('uid', 'x')}__{index}",
+                text=f"replacement {index}",
+                metadata={},
+            )
+            for index in range(2)
+        ],
+    )
+    old_state = {
+        f"{emails[0].uid}__0": ([0.1], "old zero", {"version": "old"}),
+        f"{emails[0].uid}__1": ([0.2], "old one", {"version": "old"}),
+    }
+    monkeypatch.setattr(
+        "mailarium.chunker.chunk_email",
+        lambda email: [
+            EmailChunk(
+                uid=email.get("uid", "x"),
+                chunk_id=f"{email.get('uid', 'x')}__{index}",
+                text=f"replacement {index}",
+                metadata={},
+            )
+            for index in range(2)
+        ],
+    )
+
+    class _Collection:
+        def __init__(self):
+            self.state = dict(old_state)
+
+        def get(self, ids, include):
+            del include
+            return {
+                "ids": list(ids),
+                "embeddings": [self.state[chunk_id][0] for chunk_id in ids],
+                "documents": [self.state[chunk_id][1] for chunk_id in ids],
+                "metadatas": [self.state[chunk_id][2] for chunk_id in ids],
+            }
+
+        def delete(self, ids):
+            for chunk_id in ids:
+                self.state.pop(chunk_id, None)
+
+        def upsert(self, ids, embeddings, documents, metadatas):
+            for index, chunk_id in enumerate(ids):
+                self.state[chunk_id] = (embeddings[index], documents[index], metadatas[index])
+
+    class _Embedder:
+        instances: ClassVar[list[_Embedder]] = []
+
+        def __init__(self, **_kwargs):
+            self.collection = _Collection()
+            self.calls = 0
+            self.__class__.instances.append(self)
+
+        def close(self):
+            pass
+
+        def set_sparse_db(self, _db):
+            pass
+
+        def get_existing_ids(self, refresh=False):
+            del refresh
+            return set(old_state)
+
+        def upsert_chunks(self, chunks, batch_size=100):
+            assert len(chunks) <= batch_size
+            self.calls += 1
+            chunk = chunks[0]
+            self.collection.state[chunk.chunk_id] = ([9.9], chunk.text, {"version": "new"})
+            if self.calls == 2:
+                raise RuntimeError("second bounded batch failed")
+            return len(chunks)
+
+    monkeypatch.setattr("mailarium.embedder.EmailEmbedder", _Embedder)
+
+    with pytest.raises(RuntimeError, match="second bounded batch failed"):
+        ingest_mod.reembed(sqlite_path=sqlite_file, batch_size=1)
+
+    assert _Embedder.instances[0].collection.state == old_state
 
 
 def test_reembed_skips_emails_without_body(monkeypatch, tmp_path):

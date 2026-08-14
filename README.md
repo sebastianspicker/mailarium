@@ -184,6 +184,23 @@ The current pages are Search, Overview, People, Connections, Evidence, and
 Mailbox. The images below are synthetic 1440 by 900 documentation captures
 from maintained HTML fixtures, not live Streamlit sessions.
 
+[Open the static, simulated product demo](https://sebastianspicker.github.io/mailarium/).
+It uses synthetic fixture data and does not connect to a mailbox or Mailarium
+runtime.
+
+Serve the tracked demo locally with no Mailarium dependencies:
+
+```bash
+python3 -m http.server 8082 --bind 127.0.0.1 --directory docs
+```
+
+Open <http://127.0.0.1:8082/>. The `docs/` directory contains `index.html`,
+the demo CSS and JavaScript, and `.nojekyll`, so it is suitable as a static
+Pages source. This repository does not contain a Pages deployment workflow;
+remote branch/folder configuration and the hosted revision must be verified
+separately. The demo is a simulated product explanation, not Streamlit or an
+OLM, SQLite, search, MCP, attachment, or EWS runtime test.
+
 ![Search interface](docs/screenshots/streamlit-search-ui.png)
 
 ![Archive overview](docs/screenshots/streamlit-dashboard-ui.png)

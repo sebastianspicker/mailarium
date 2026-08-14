@@ -54,6 +54,8 @@ def test_local_runner_reorders_by_returned_score(tmp_path):
         results = LocalLateInteractionBackend(str(runner), str(model)).rerank("q", [_result("a"), _result("b")], top_k=1)
     assert [item.chunk_id for item in results] == ["b"]
     assert results[0].metadata["reranker"] == "late_interaction_local"
+    assert results[0].metadata["score_kind"] == "late_interaction"
+    assert results[0].distance == pytest.approx(0.1)
     assert run.call_args.args[0] == runner.resolve()
 
 
@@ -63,6 +65,67 @@ def test_local_runner_rejects_response_ids_not_requested(tmp_path):
     with patch("mailarium.late_interaction_backend._run_bounded_runner", return_value=(0, output)):
         with pytest.raises(LateInteractionError, match="IDs do not match"):
             LocalLateInteractionBackend(str(runner), str(model)).rerank("q", [_result("a")], top_k=1)
+
+
+@pytest.mark.parametrize(
+    ("output", "message"),
+    [
+        ("not-json", "returned invalid JSON"),
+        (json.dumps([]), "unsupported protocol version"),
+        (json.dumps({"version": 2, "scores": {"a": 0.0}}), "unsupported protocol version"),
+        (json.dumps({"version": 1, "scores": [0.0]}), "must contain a scores object"),
+        (json.dumps({"version": 1, "scores": {}}), "IDs do not match"),
+        (json.dumps({"version": 1, "scores": {"a": 0.0, "extra": 0.1}}), "IDs do not match"),
+        (json.dumps({"version": 1, "scores": {"a": "not-a-score"}}), "invalid score for 'a'"),
+        (json.dumps({"version": 1, "scores": {"a": -1.01}}), "out-of-range score for 'a'"),
+        (json.dumps({"version": 1, "scores": {"a": 1.01}}), "out-of-range score for 'a'"),
+    ],
+)
+def test_local_runner_rejects_invalid_score_protocol_responses(tmp_path, output, message):
+    runner, model = _artifact(tmp_path)
+    with patch("mailarium.late_interaction_backend._run_bounded_runner", return_value=(0, output)):
+        with pytest.raises(LateInteractionError, match=message):
+            LocalLateInteractionBackend(str(runner), str(model)).rerank("q", [_result("a")], top_k=1)
+
+
+@pytest.mark.parametrize("score", [-1.0, 1.0])
+def test_local_runner_accepts_score_range_boundaries(tmp_path, score):
+    runner, model = _artifact(tmp_path)
+    output = json.dumps({"version": 1, "scores": {"a": score}})
+    with patch("mailarium.late_interaction_backend._run_bounded_runner", return_value=(0, output)):
+        results = LocalLateInteractionBackend(str(runner), str(model)).rerank("q", [_result("a")], top_k=1)
+
+    assert results[0].distance == 1.0 - score
+
+
+def test_local_runner_preserves_input_order_for_equal_scores(tmp_path):
+    runner, model = _artifact(tmp_path)
+    output = json.dumps({"version": 1, "scores": {"a": 0.5, "b": 0.5}})
+    with patch("mailarium.late_interaction_backend._run_bounded_runner", return_value=(0, output)):
+        results = LocalLateInteractionBackend(str(runner), str(model)).rerank("q", [_result("a"), _result("b")], top_k=2)
+
+    assert [result.chunk_id for result in results] == ["a", "b"]
+
+
+def test_local_runner_coerces_legacy_boolean_scores(tmp_path):
+    runner, model = _artifact(tmp_path)
+    output = json.dumps({"version": 1, "scores": {"a": True, "b": False}})
+    with patch("mailarium.late_interaction_backend._run_bounded_runner", return_value=(0, output)):
+        results = LocalLateInteractionBackend(str(runner), str(model)).rerank("q", [_result("a"), _result("b")], top_k=2)
+
+    assert [result.chunk_id for result in results] == ["a", "b"]
+    assert [result.distance for result in results] == [0.0, 1.0]
+
+
+def test_local_runner_rejects_oversized_response_before_json_parsing(tmp_path, monkeypatch):
+    runner, model = _artifact(tmp_path)
+    output = "not-json" + "x" * 10_000
+    monkeypatch.setattr("mailarium.late_interaction_backend._MAX_PAYLOAD_CHARS", 10_000)
+    with patch("mailarium.late_interaction_backend._run_bounded_runner", return_value=(0, output)):
+        with pytest.raises(LateInteractionError) as exc_info:
+            LocalLateInteractionBackend(str(runner), str(model)).rerank("q", [_result("a")], top_k=1)
+
+    assert str(exc_info.value) == "late-interaction response exceeds the configured safety limit"
 
 
 def test_executable_local_runner_completes_protocol_round_trip(tmp_path):

@@ -1,5 +1,7 @@
 """Verifies thread intelligence extracts action items and decisions from related conversations."""
 
+import pytest
+
 from mailarium.thread_intelligence import (
     ActionItem,
     Decision,
@@ -77,6 +79,20 @@ class TestActionItemExtraction:
         items = self.analyzer.extract_action_items(text, source_uid="uid-123")
         assert all(a.source_uid == "uid-123" for a in items)
 
+    def test_action_metadata_preserved(self):
+        text = "I'll complete the urgent security review by tomorrow."
+        items = self.analyzer.extract_action_items(text, sender="alice@example.test", source_uid="uid-123")
+
+        assert items == [
+            ActionItem(
+                text="complete the urgent security review by tomorrow",
+                assignee="alice@example.test",
+                deadline="tomorrow",
+                is_urgent=True,
+                source_uid="uid-123",
+            )
+        ]
+
     def test_follow_up_pattern(self):
         text = "Follow up: check with legal team about compliance requirements."
         items = self.analyzer.extract_action_items(text)
@@ -87,6 +103,15 @@ class TestActionItemExtraction:
         items = self.analyzer.extract_action_items(text)
         assert len(items) >= 1
         assert any("eingruppierung" in a.text.lower() or "sbv" in a.text.lower() for a in items)
+
+    def test_pattern_order_is_preserved(self):
+        text = "We need to complete the architecture review today. Please review the project timeline carefully."
+        items = self.analyzer.extract_action_items(text)
+
+        assert [item.text for item in items] == [
+            "review the project timeline carefully",
+            "complete the architecture review today",
+        ]
 
 
 class TestDecisionExtraction:
@@ -141,16 +166,55 @@ class TestDecisionExtraction:
     def test_sender_and_date_preserved(self):
         text = "We decided to go ahead with the merger and acquisitions plan."
         decisions = self.analyzer.extract_decisions(text, sender="boss@example.test", date="2024-01-15", source_uid="uid-456")
-        for d in decisions:
-            assert d.made_by == "boss@example.test"
-            assert d.date == "2024-01-15"
-            assert d.source_uid == "uid-456"
+        assert decisions == [
+            Decision(
+                text="go ahead with the merger and acquisitions plan",
+                made_by="boss@example.test",
+                date="2024-01-15",
+                source_uid="uid-456",
+            ),
+            Decision(
+                text="the merger and acquisitions plan",
+                made_by="boss@example.test",
+                date="2024-01-15",
+                source_uid="uid-456",
+            ),
+        ]
 
     def test_deduplication(self):
         text = "We decided to go with option A for now. Later, we decided to go with option A for now."
         decisions = self.analyzer.extract_decisions(text)
         texts = [d.text.lower().strip() for d in decisions]
         assert len(texts) == len(set(texts))
+
+
+class TestSharedPatternMatchNormalization:
+    @pytest.mark.parametrize(
+        ("method_name", "text", "expected_texts"),
+        [
+            (
+                "extract_action_items",
+                "Please review the project timeline carefully. Action required: REVIEW THE PROJECT TIMELINE CAREFULLY.",
+                ["review the project timeline carefully"],
+            ),
+            (
+                "extract_decisions",
+                "Management confirmed that the merger plan is approved. The decision is THE MERGER PLAN IS APPROVED.",
+                ["the merger plan is approved"],
+            ),
+            (
+                "extract_action_items",
+                "Please review the Straße travel plan now. Action required: review the STRASSE travel plan now.",
+                ["review the Straße travel plan now", "review the STRASSE travel plan now"],
+            ),
+        ],
+    )
+    def test_cross_pattern_duplicates_are_deduplicated_case_insensitively(
+        self, method_name: str, text: str, expected_texts: list[str]
+    ):
+        findings = getattr(ThreadAnalyzer(), method_name)(text)
+
+        assert [finding.text for finding in findings] == expected_texts
 
 
 class TestThreadAnalyzer:

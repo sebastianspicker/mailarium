@@ -2,7 +2,7 @@
 
 import time
 
-from mailarium.formatting import build_result_header, estimate_tokens, format_triage_results
+from mailarium.formatting import _strip_metadata_header, build_result_header, estimate_tokens, format_triage_results
 from mailarium.sanitization import csv_safe_cell
 
 
@@ -27,6 +27,27 @@ def test_compact_results_strip_metadata_header_preview():
     [entry] = format_triage_results([Result()])
 
     assert entry["preview"] == "Actual body"
+
+
+def test_metadata_header_stripping_leaves_non_header_text_byte_for_byte_unchanged():
+    for text in (
+        "  ordinary body with surrounding whitespace  \n",
+        "Message-ID: <id@example.test>\nDate: body metadata must stay\n",
+        "Actual body\nSubject: metadata after body must stay\n",
+    ):
+        assert _strip_metadata_header(text) == text
+
+
+def test_metadata_header_stripping_handles_calendar_and_part_markers():
+    text = "[Calendar/Meeting]\n[Part 1/2]\n\n  Meeting body  \n"
+
+    assert _strip_metadata_header(text) == "Meeting body"
+
+
+def test_metadata_header_stripping_consumes_multiple_separators_and_preserves_body_newlines():
+    text = "Date: 2025-01-15\r\n\r\n \r\nFrom: sender@example.test\r\n\r\nFirst body line\r\n  second body line\r\n"
+
+    assert _strip_metadata_header(text) == "First body line\r\n  second body line"
 
 
 def test_result_header_shows_non_inbox_folder():

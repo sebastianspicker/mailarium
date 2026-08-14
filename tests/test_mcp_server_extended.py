@@ -433,6 +433,44 @@ class TestMain:
 
 
 class TestAcquireInstanceLock:
+    @pytest.mark.parametrize("existing_pid", ("", "unknown"))
+    def test_lock_pid_without_usable_value_is_not_stale(self, existing_pid):
+        """Empty and unknown lock contents must preserve active contention."""
+        from mailarium import mcp_server
+
+        with patch("mailarium.mcp_server.os.kill") as mock_kill:
+            assert mcp_server._is_stale_lock_pid(existing_pid) is False
+
+        mock_kill.assert_not_called()
+
+    def test_nonnumeric_lock_pid_is_stale(self):
+        """A malformed PID cannot identify a live process."""
+        from mailarium import mcp_server
+
+        with patch("mailarium.mcp_server.os.kill") as mock_kill:
+            assert mcp_server._is_stale_lock_pid("not-a-pid") is True
+
+        mock_kill.assert_not_called()
+
+    def test_live_lock_pid_is_not_stale(self):
+        """A live process keeps its lock."""
+        from mailarium import mcp_server
+
+        with patch("mailarium.mcp_server.os.kill") as mock_kill:
+            assert mcp_server._is_stale_lock_pid("4242") is False
+
+        mock_kill.assert_called_once_with(4242, 0)
+
+    @pytest.mark.parametrize("error", (OSError("gone"), ValueError("invalid PID")))
+    def test_lock_pid_is_stale_when_existence_check_errors(self, error):
+        """Process-check failures mark the lock stale for recovery."""
+        from mailarium import mcp_server
+
+        with patch("mailarium.mcp_server.os.kill", side_effect=error) as mock_kill:
+            assert mcp_server._is_stale_lock_pid("4242") is True
+
+        mock_kill.assert_called_once_with(4242, 0)
+
     def test_acquire_lock_warns_and_continues_when_no_fcntl(self, monkeypatch, caplog):
         """When fcntl is not importable, startup continues without a lock."""
         from mailarium import mcp_server

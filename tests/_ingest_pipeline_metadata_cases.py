@@ -1,10 +1,9 @@
-# ruff: noqa: I001
 """Ingestion metadata backfill, analytics, provenance persistence, and consumer-failure behavior."""
 
 import queue
 import threading
-import time
 
+import pytest
 
 from mailarium.ingest import _SENTINEL, _EmbedPipeline
 
@@ -492,9 +491,35 @@ def test_reingest_metadata_backfills_v7_fields(monkeypatch, tmp_path):
 
 
 def test_pipeline_consumer_error_does_not_deadlock():
-    """When consumer thread raises, producer should not block on full queue."""
+    """Consumer failure drains pending work, unblocks producers, and preserves its error."""
+
+    class _ConsumerFailure(BaseException):
+        pass
+
+    class _TrackingQueue(queue.Queue):
+        def __init__(self, blocked_chunks):
+            super().__init__(maxsize=2)
+            self.blocked_chunks = blocked_chunks
+            self.blocked_put_entered = threading.Event()
+            self.blocked_put_completed = threading.Event()
+            self.drained_items = []
+
+        def put(self, item, block=True, timeout=None):
+            is_blocked_producer = isinstance(item, tuple) and item[0] is self.blocked_chunks
+            if is_blocked_producer:
+                self.blocked_put_entered.set()
+            super().put(item, block=block, timeout=timeout)
+            if is_blocked_producer:
+                self.blocked_put_completed.set()
+
+        def get_nowait(self):
+            item = super().get_nowait()
+            self.drained_items.append(item)
+            return item
+
     pipeline = _EmbedPipeline.__new__(_EmbedPipeline)
-    pipeline._queue = queue.Queue(maxsize=2)
+    blocked_chunks = ["blocked"]
+    pipeline._queue = _TrackingQueue(blocked_chunks)
     pipeline._embedder = None
     pipeline._email_db = None
     pipeline._ingestion_run_id = None
@@ -511,22 +536,48 @@ def test_pipeline_consumer_error_does_not_deadlock():
     pipeline._detailed_timing = False
     pipeline.analytics_seconds = 0.0
 
-    # Override _process_batch to always raise
-    def _failing_batch(chunks, emails):
-        raise RuntimeError("test error")
+    consumer_processing = threading.Event()
+    release_consumer_failure = threading.Event()
+    producer_finished = threading.Event()
+    failure = _ConsumerFailure("test error")
+
+    def _failing_batch(_chunks, _emails):
+        consumer_processing.set()
+        assert release_consumer_failure.wait(timeout=2)
+        raise failure
 
     pipeline._process_batch = _failing_batch
     pipeline._thread = threading.Thread(target=pipeline._run, daemon=True)
     pipeline._thread.start()
 
-    # Submit work - consumer will crash on first batch
-    pipeline._queue.put((["chunk1"], []))
-    time.sleep(0.2)
+    active_batch = (["active"], [])
+    pending_batch = (["pending"], [])
+    pipeline._queue.put(active_batch)
+    assert consumer_processing.wait(timeout=2)
 
-    # The consumer should have drained the queue, so this put should not block
-    # even though the consumer has died
-    pipeline._queue.put(([" chunk2"], []))
+    # The consumer is held in the first batch. Pending work and the sentinel
+    # fill the bounded queue, so this producer cannot complete until failure
+    # cleanup drains an item.
+    pipeline._queue.put(pending_batch)
     pipeline._queue.put(_SENTINEL)
-    pipeline._thread.join(timeout=2)
-    assert not pipeline._thread.is_alive(), "Consumer thread should have exited"
-    assert pipeline._error is not None
+
+    def _submit_blocked_batch():
+        pipeline.submit(blocked_chunks, [])
+        producer_finished.set()
+
+    producer = threading.Thread(target=_submit_blocked_batch, daemon=True)
+    producer.start()
+    assert pipeline._queue.blocked_put_entered.wait(timeout=2)
+    assert not pipeline._queue.blocked_put_completed.is_set()
+
+    release_consumer_failure.set()
+    assert producer_finished.wait(timeout=2), "Queue drain should release the blocked producer"
+    producer.join(timeout=2)
+    assert not producer.is_alive()
+
+    with pytest.raises(_ConsumerFailure) as caught:
+        pipeline.finish()
+
+    assert caught.value is failure
+    assert pipeline._thread is None
+    assert pipeline._queue.drained_items == [pending_batch, _SENTINEL]

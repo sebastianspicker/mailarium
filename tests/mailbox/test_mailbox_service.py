@@ -100,6 +100,16 @@ class PagedFullRefreshGateway(FakeGateway):
         )
 
 
+class FolderDiscoveryGateway(FakeGateway):
+    def __init__(self, folders) -> None:
+        super().__init__()
+        self.folders = tuple(folders)
+
+    def find_mail_folders(self):
+        self.calls.append("find_mail_folders")
+        return self.folders
+
+
 class IncompleteGetItemGateway(FakeGateway):
     def sync_folder_items(self, _folder_id, *, watermark, max_changes):
         return EWSSyncDelta((EWSItemRef("missing", "ck"),), (), (), "unsafe", False)
@@ -780,6 +790,103 @@ class MailboxServiceTests(unittest.TestCase):
         self.assertEqual({"page-1", "page-2"}, active)
         stale = self.store.conn.execute("SELECT is_tombstone FROM email_sources WHERE remote_item_id='item'").fetchone()
         self.assertEqual(1, stale[0])
+
+    def test_discover_folders_can_explicitly_replace_the_selected_allowlist(self) -> None:
+        gateway = FolderDiscoveryGateway(
+            (
+                SimpleNamespace(folder_id="inbox-id", display_name="Inbox", folder_class="IPF.Note", total_count=12),
+                SimpleNamespace(folder_id="archive-id", display_name="Archive", folder_class="IPF.Note.Archive", total_count=2),
+                SimpleNamespace(folder_id="calendar-id", display_name="Calendar", folder_class="IPF.Appointment", total_count=1),
+            )
+        )
+        self.service.gateway_factory = lambda _account, _policy: gateway
+
+        result = self.service.discover_folders("account", select=True)
+
+        self.assertTrue(result["selected"])
+        self.assertEqual(
+            [
+                {"folder_id": "archive-id", "display_name": "Archive", "folder_class": "IPF.Note.Archive", "total_count": 2},
+                {"folder_id": "inbox-id", "display_name": "Inbox", "folder_class": "IPF.Note", "total_count": 12},
+            ],
+            result["folders"],
+        )
+        self.assertEqual(
+            {"archive-id", "inbox-id"},
+            {row["folder_id"] for row in self.store.list_folders("account")},
+        )
+        self.assertEqual(["find_mail_folders"], gateway.calls)
+
+    def test_discover_folders_requires_the_existing_read_gate_before_remote_access(self) -> None:
+        service = MailboxService(
+            self.store,
+            policy=MailboxRuntimePolicy(read_enabled=False),
+            gateway_factory=lambda *_args: (_ for _ in ()).throw(AssertionError("gateway must not be constructed")),
+        )
+
+        with self.assertRaisesRegex(PermissionError, "reads are disabled"):
+            service.discover_folders("account")
+
+    def test_until_complete_repeats_only_incomplete_bounded_folder_passes(self) -> None:
+        gateway = PagedFullRefreshGateway()
+
+        def persist(record, **_kwargs):
+            self.store.upsert_source(record)
+            return SimpleNamespace(indexed_chunks=0)
+
+        service = self._sync_service(
+            gateway,
+            policy=MailboxRuntimePolicy(read_enabled=True, max_sync_items=1),
+            persist_record=persist,
+        )
+
+        result = service.sync("account", folders=("inbox",), until_complete=True)
+
+        self.assertTrue(result["complete"])
+        self.assertEqual(2, result["passes"])
+        self.assertEqual(2, result["created"])
+        self.assertTrue(result["folders"]["inbox"]["complete"])
+        self.assertEqual([(None, 1), ("page-one", 1)], gateway.calls)
+
+    def test_until_complete_rejects_an_incomplete_pass_without_cursor_progress(self) -> None:
+        service = self._sync_service(NonAdvancingSyncGateway())
+
+        with self.assertRaisesRegex(RuntimeError, "watermark did not advance"):
+            service.sync("account", folders=("inbox",), until_complete=True)
+
+    def test_defer_indexing_preserves_remote_sync_but_skips_embedder_creation(self) -> None:
+        embedders: list[object] = []
+        persisted_embedders: list[object | None] = []
+
+        def create_embedder():
+            embedder = SimpleNamespace(close=lambda: None)
+            embedders.append(embedder)
+            return embedder
+
+        def persist(_record, **kwargs):
+            persisted_embedders.append(kwargs["embedder"])
+            return SimpleNamespace(indexed_chunks=7 if kwargs["embedder"] is not None else 0)
+
+        service = MailboxService(
+            self.store,
+            db=object(),
+            policy=MailboxRuntimePolicy(read_enabled=True),
+            gateway_factory=lambda _account, _policy: SyncGateway(),
+            embedder_factory=create_embedder,
+            persist_record=persist,
+        )
+
+        indexed = service.sync("account", folders=("inbox",))
+        deferred = service.sync("account", folders=("inbox",), defer_indexing=True)
+
+        self.assertEqual(1, len(embedders))
+        self.assertIs(embedders[0], persisted_embedders[0])
+        self.assertIsNone(persisted_embedders[1])
+        self.assertEqual(1, indexed["created"])
+        self.assertEqual(1, deferred["created"])
+        self.assertEqual(7, indexed["indexed_chunks"])
+        self.assertEqual(0, deferred["indexed_chunks"])
+        self.assertEqual((1, "watermark"), self.store.get_cursor("account", "inbox"))
 
     def test_incomplete_get_item_response_does_not_advance_cursor(self) -> None:
         service = self._sync_service(IncompleteGetItemGateway())

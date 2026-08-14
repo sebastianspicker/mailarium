@@ -110,6 +110,28 @@ def test_public_docs_index_only_routes_to_current_surfaces() -> None:
     assert "Python 3.14.6" in compatibility
 
 
+def test_compatibility_policy_pins_the_retirement_decision() -> None:
+    compatibility = _read("docs/API_COMPATIBILITY.md")
+    normalized = " ".join(compatibility.split())
+
+    for required_contract in (
+        "## Governing 0.5 Retirement Decision",
+        "169 of the 299 deleted `src/` entries",
+        "other 130 `src/` entries",
+        "51 case-analysis and orchestration entries",
+        "28 matter,",
+        "20 legal and employment support entries",
+        "27 behavioral, comparative, and rhetoric-analysis entries",
+        "4 legacy CLI or model-backend compatibility entries",
+        "145 deleted test paths",
+        "all 97 deleted `docs/agent/` paths",
+        "Rollback is version rollback, not an in-place schema downgrade",
+        "tests/test_repo_contracts_public_surface.py",
+        "Live EWS interoperability remains a separately disclosed release limitation",
+    ):
+        assert required_contract in normalized
+
+
 def test_release_status_preserves_the_exact_ews_verification_boundary() -> None:
     release_status = _read("RELEASE_STATUS.md")
 

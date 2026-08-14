@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import unittest
 
 from mailarium.email_db import EmailDatabase
@@ -115,6 +116,71 @@ class MailboxIngestTests(unittest.TestCase):
         ).fetchone()
         self.assertEqual(0, source[0])
 
+    def test_ews_full_body_is_retained_as_forensic_text_and_segments(self) -> None:
+        full_body = (
+            "Liebe Petra,\n\nich kuemmere mich darum.\n\n"
+            "Von: Anabel Derlam <derlam@example.test>\n"
+            "Gesendet: Mittwoch, 13. Mai 2026 15:00\n"
+            "An: Petra John <john@example.test>\n"
+            "Betreff: eSignatur\n\n"
+            "Warum hat sich Sebastian hier mit dem Verteiler eingeschaltet?"
+        )
+
+        result = persist_mailbox_record(
+            self.record(subject="AW: eSignatur", body_text=full_body),
+            db=self.db,
+            store=self.store,
+        )
+
+        row = self.db.conn.execute(
+            "SELECT raw_body_text,forensic_body_text,forensic_body_source FROM emails WHERE uid=?",
+            (result.canonical_email_uid,),
+        ).fetchone()
+        self.assertEqual(full_body, row["raw_body_text"])
+        self.assertEqual(full_body, row["forensic_body_text"])
+        self.assertEqual("ews_raw_body_text", row["forensic_body_source"])
+        segments = self.db.conn.execute(
+            "SELECT segment_type,text FROM message_segments WHERE email_uid=? ORDER BY ordinal",
+            (result.canonical_email_uid,),
+        ).fetchall()
+        self.assertTrue(segments)
+        self.assertTrue(any("Warum hat sich Sebastian" in segment["text"] for segment in segments))
+        email = mailbox_record_to_email(self.record(subject="AW: eSignatur", body_text=full_body), "canonical")
+        chunks, _preserved = _mailbox_chunks(email)
+        forensic_chunks = [chunk for chunk in chunks if "__forensic_" in chunk.chunk_id]
+        self.assertTrue(forensic_chunks)
+        self.assertTrue(any("Warum hat sich Sebastian" in chunk.text for chunk in forensic_chunks))
+        self.assertTrue(all(chunk.metadata["source_scope"] == "forensic_body_text" for chunk in forensic_chunks))
+
+    def test_recovered_ews_history_updates_forensic_surface_when_clean_body_is_unchanged(self) -> None:
+        authored = "Liebe Petra,\n\nich kuemmere mich darum."
+        full_body = (
+            f"{authored}\n\n"
+            "On Wednesday, 13 May 2026, Anabel Derlam wrote:\n"
+            "> Warum hat sich Sebastian hier mit dem Verteiler eingeschaltet?"
+        )
+        first = persist_mailbox_record(
+            self.record(subject="AW: eSignatur", body_text=authored),
+            db=self.db,
+            store=self.store,
+        )
+
+        recovered = persist_mailbox_record(
+            self.record(subject="AW: eSignatur", body_text=full_body, change_key="ck-2"),
+            db=self.db,
+            store=self.store,
+        )
+
+        self.assertEqual(first.canonical_email_uid, recovered.canonical_email_uid)
+        self.assertTrue(recovered.content_changed)
+        row = self.db.conn.execute(
+            "SELECT body_text,raw_body_text,forensic_body_text FROM emails WHERE uid=?",
+            (recovered.canonical_email_uid,),
+        ).fetchone()
+        self.assertEqual(authored, row["body_text"])
+        self.assertEqual(full_body, row["raw_body_text"])
+        self.assertEqual(full_body, row["forensic_body_text"])
+
     def test_conflicting_message_id_uses_source_specific_uid(self) -> None:
         first = persist_mailbox_record(self.record(), db=self.db, store=self.store)
         self.store.set_folders("other", {"inbox": "Inbox"}, source="ews")
@@ -130,7 +196,11 @@ class MailboxIngestTests(unittest.TestCase):
         self.assertTrue(second.possible_duplicate)
 
     def test_preexisting_archive_email_remains_visible_after_ews_tombstone(self) -> None:
-        local = self.local_email()
+        local = self.local_email(
+            raw_body_text="Archive forensic body",
+            forensic_body_text="Archive forensic body",
+            forensic_body_source="raw_body_text",
+        )
         self.assertTrue(self.db.insert_email(local))
         linked = persist_mailbox_record(self.record(), db=self.db, store=self.store)
         self.assertEqual(local.uid, linked.canonical_email_uid)
@@ -138,6 +208,12 @@ class MailboxIngestTests(unittest.TestCase):
             "SELECT canonical_preexisting FROM email_sources WHERE remote_item_id='item-1'"
         ).fetchone()
         self.assertEqual(1, source[0])
+        stored = self.db.conn.execute(
+            "SELECT raw_body_text,forensic_body_text FROM emails WHERE uid=?",
+            (local.uid,),
+        ).fetchone()
+        self.assertEqual("Archive forensic body", stored["raw_body_text"])
+        self.assertEqual("Archive forensic body", stored["forensic_body_text"])
 
         self.store.tombstone_source(
             account_id="account",
@@ -176,7 +252,7 @@ class MailboxIngestTests(unittest.TestCase):
         chunks, _preserved = _mailbox_chunks(with_content)
         self.assertTrue(any("__att_" in chunk.chunk_id for chunk in chunks))
 
-    def test_vector_failure_leaves_projection_retryable(self) -> None:
+    def test_vector_failure_leaves_projection_retryable_without_orphan(self) -> None:
         embedder = _RecordingEmbedder(fail_add=True)
 
         with self.assertRaisesRegex(RuntimeError, "transient vector failure"):
@@ -187,16 +263,39 @@ class MailboxIngestTests(unittest.TestCase):
                 embedder=embedder,
             )
 
-        self.assertIsNone(self.store.conn.execute("SELECT 1 FROM email_sources WHERE remote_item_id='item-1'").fetchone())
+        source = self.store.conn.execute(
+            "SELECT canonical_email_uid,metadata_json FROM email_sources WHERE remote_item_id='item-1'"
+        ).fetchone()
+        self.assertIsNotNone(source)
+        self.assertNotIn("projection_hash", json.loads(source["metadata_json"]))
+        self.assertTrue(json.loads(source["metadata_json"])["projection_pending"])
+        self.assertEqual(
+            1,
+            self.db.conn.execute("SELECT COUNT(*) FROM emails e JOIN email_sources s ON s.canonical_email_uid=e.uid").fetchone()[
+                0
+            ],
+        )
         replay = persist_mailbox_record(
-            self.record(),
+            self.record(
+                change_key="ck-2",
+                metadata={"safe_diagnostic": "replayed", "credential_value": "must-not-persist"},
+            ),
             db=self.db,
             store=self.store,
             embedder=embedder,
         )
         self.assertTrue(replay.metadata_changed)
         self.assertTrue(embedder.upserted_ids)
-        self.assertIsNotNone(self.store.conn.execute("SELECT 1 FROM email_sources WHERE remote_item_id='item-1'").fetchone())
+        source = self.store.conn.execute(
+            "SELECT change_key,metadata_json FROM email_sources WHERE remote_item_id='item-1'"
+        ).fetchone()
+        source_metadata = json.loads(source["metadata_json"])
+        self.assertEqual("ck-2", source["change_key"])
+        self.assertEqual("replayed", source_metadata["safe_diagnostic"])
+        self.assertEqual("[REDACTED]", source_metadata["credential_value"])
+        self.assertIn("projection_hash", source_metadata)
+        self.assertNotIn("projection_pending", source_metadata)
+        self.assertEqual(1, self.store.conn.execute("SELECT COUNT(*) FROM email_source_identity_history").fetchone()[0])
 
     def test_metadata_only_ews_refresh_preserves_richer_canonical_attachment(self) -> None:
         content = b"canonical attachment evidence"

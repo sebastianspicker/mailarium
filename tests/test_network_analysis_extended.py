@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from mailarium.email_db import EmailDatabase
-from mailarium.network_analysis import _ANALYSIS_CACHE_MAX, _BETWEENNESS_CACHE_MAX, CommunicationNetwork
+from mailarium.network_analysis import (
+    _ANALYSIS_CACHE_MAX,
+    _BETWEENNESS_CACHE_MAX,
+    CommunicationNetwork,
+    _dated_sender_events,
+    _sender_window_summary,
+)
 
 from .helpers.email_db_builders import _make_email
 from .helpers.email_db_builders import make_network_db as _populated_db
@@ -281,6 +288,80 @@ class TestCoordinatedTimingEdgeCases:
             min_events=3,
         )
         assert result == []
+
+    def test_coordinated_timing_includes_window_endpoint(self):
+        """An event exactly at the inclusive endpoint qualifies the first window."""
+        db = EmailDatabase(":memory:")
+        timeline = [
+            ("zeta@example.test", "2024-01-15T10:00:00+02:00"),
+            ("alpha@example.test", "2024-01-15T08:30:00Z"),
+            ("beta@example.test", "2024-01-15T09:00:00Z"),
+        ]
+        for index, (sender, date) in enumerate(timeline):
+            db.insert_email(
+                _make_email(
+                    message_id=f"<window{index}@example.test>",
+                    sender_email=sender,
+                    to=["Recipient <recipient@example.test>"],
+                    date=date,
+                )
+            )
+
+        windows = CommunicationNetwork(db).coordinated_timing(
+            ["zeta@example.test", "alpha@example.test", "beta@example.test"],
+            window_hours=1,
+            min_events=3,
+        )
+
+        assert windows == [
+            {
+                "window_start": "2024-01-15T08:00:00",
+                "window_end": "2024-01-15T09:00:00",
+                "senders": ["alpha@example.test", "beta@example.test", "zeta@example.test"],
+                "email_count": 3,
+            }
+        ]
+
+    def test_coordinated_timing_skips_later_qualifying_overlapping_anchor(self):
+        """A later anchor would qualify independently but must not duplicate the emitted window."""
+        db = EmailDatabase(":memory:")
+        timeline = [
+            ("alpha@example.test", "2024-01-15T08:00:00"),
+            ("beta@example.test", "2024-01-15T08:30:00"),
+            ("gamma@example.test", "2024-01-15T09:00:00"),
+            ("delta@example.test", "2024-01-15T09:15:00"),
+        ]
+        for index, (sender, date) in enumerate(timeline):
+            db.insert_email(
+                _make_email(
+                    message_id=f"<overlap{index}@example.test>",
+                    sender_email=sender,
+                    to=["Recipient <recipient@example.test>"],
+                    date=date,
+                )
+            )
+
+        senders = [sender for sender, _ in timeline]
+        dated_events = _dated_sender_events(db.sender_activity_timeline(senders))
+        dated_events.sort(key=lambda event: event[0])
+        alternate_senders, alternate_count = _sender_window_summary(
+            dated_events,
+            start_index=1,
+            window_end=dated_events[1][0] + timedelta(hours=1),
+        )
+        assert len(alternate_senders) == 3
+        assert alternate_count == 3
+
+        windows = CommunicationNetwork(db).coordinated_timing(senders, window_hours=1, min_events=3)
+
+        assert windows == [
+            {
+                "window_start": "2024-01-15T08:00:00",
+                "window_end": "2024-01-15T09:00:00",
+                "senders": ["alpha@example.test", "beta@example.test", "gamma@example.test"],
+                "email_count": 3,
+            }
+        ]
 
 
 # ── relationship_summary edge cases ──────────────────────────

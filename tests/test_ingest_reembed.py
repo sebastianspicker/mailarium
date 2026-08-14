@@ -9,10 +9,13 @@ from ._ingest_cases import (
     test_ingest_stats_include_image_embeddings,
     test_multibatch_reembed_restores_prior_chunks_after_partial_upsert_failure,
     test_pipeline_consumer_error_does_not_deadlock,
+    test_reembed_batches_small_emails_across_model_calls,
     test_reembed_deletes_only_obsolete_body_chunks_after_success,
     test_reembed_empty_database,
     test_reembed_keeps_existing_body_chunks_when_upsert_fails,
     test_reembed_rechunks_and_upserts,
+    test_reembed_restores_large_email_when_a_later_bounded_batch_fails,
+    test_reembed_resume_skips_matching_content_and_model_provenance,
     test_reembed_skips_emails_without_body,
 )
 
@@ -27,7 +30,10 @@ _COLLECTED_TESTS = (
     test_reembed_deletes_only_obsolete_body_chunks_after_success,
     test_pipeline_consumer_error_does_not_deadlock,
     test_reembed_empty_database,
+    test_reembed_batches_small_emails_across_model_calls,
     test_reembed_keeps_existing_body_chunks_when_upsert_fails,
     test_reembed_rechunks_and_upserts,
+    test_reembed_resume_skips_matching_content_and_model_provenance,
+    test_reembed_restores_large_email_when_a_later_bounded_batch_fails,
     test_reembed_skips_emails_without_body,
 )

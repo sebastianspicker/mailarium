@@ -176,6 +176,61 @@ def test_attachment_format_profile_marks_legacy_word_processing_docs_as_degraded
     assert profile["degrade_reason"] == "legacy_or_portable_word_processor_structure_flattened"
 
 
+def test_attachment_format_profile_returns_independent_presentation_limitations():
+    first = attachment_format_profile(filename="slides.pptx")
+    second = attachment_format_profile(filename="slides.pptx")
+
+    assert first == {
+        "format_id": "presentation_document",
+        "format_family": "presentation",
+        "format_label": "Presentation deck",
+        "handling_mode": "slide_text_extraction",
+        "support_level": "degraded_supported",
+        "lossiness": "medium",
+        "manual_review_required": False,
+        "degrade_reason": "slide_layout_and_visual_context_flattened",
+        "limitations": ["Slide layout and visual emphasis are flattened to text."],
+    }
+    first["limitations"].append("mutated test value")
+    assert second["limitations"] == ["Slide layout and visual emphasis are flattened to text."]
+
+
+def test_extraction_quality_profile_preserves_precedence_and_limitation_copies():
+    format_profile = {
+        "lossiness": "medium",
+        "limitations": ["Source limitation"],
+        "manual_review_required": False,
+        "support_level": "unsupported",
+    }
+
+    state_result = extraction_quality_profile(
+        extraction_state="sidecar_text_extracted",
+        evidence_strength="weak_reference",
+        ocr_used=False,
+        format_profile=format_profile,
+    )
+    unsupported_result = extraction_quality_profile(
+        extraction_state="unknown",
+        evidence_strength="weak_reference",
+        ocr_used=False,
+        format_profile=format_profile,
+    )
+
+    assert list(state_result) == [
+        "quality_label",
+        "quality_rank",
+        "lossiness",
+        "visible_limitations",
+        "manual_review_required",
+    ]
+    assert state_result["quality_label"] == "sidecar_text_recovered"
+    assert state_result["quality_rank"] == "medium"
+    assert state_result["manual_review_required"] is True
+    assert unsupported_result["quality_label"] == "unsupported_format"
+    state_result["visible_limitations"].append("mutated test value")
+    assert format_profile["limitations"] == ["Source limitation"]
+
+
 def test_extract_text_truncation():
     from mailarium.attachment_extractor import MAX_EXTRACTED_CHARS
 

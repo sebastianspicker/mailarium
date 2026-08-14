@@ -217,23 +217,22 @@ class TestXlsxExtractor:
 
 class TestPptxExtractor:
     def test_pptx_extractor_function(self) -> None:
-        mock_para = MagicMock()
-        mock_para.text = "Slide text"
+        first_paragraph = MagicMock(text="First slide text")
+        second_paragraph = MagicMock(text="Second slide text")
+        empty_paragraph = MagicMock(text="   ")
 
-        mock_text_frame = MagicMock()
-        mock_text_frame.paragraphs = [mock_para]
+        first_shape = MagicMock(has_text_frame=True)
+        first_shape.text_frame.paragraphs = [first_paragraph, empty_paragraph]
+        second_shape = MagicMock(has_text_frame=True)
+        second_shape.text_frame.paragraphs = [second_paragraph]
+        no_text_shape = MagicMock(has_text_frame=False)
 
-        mock_shape = MagicMock()
-        mock_shape.has_text_frame = True
-        mock_shape.text_frame = mock_text_frame
-
-        mock_slide = MagicMock()
-        mock_slide.shapes = [mock_shape]
+        first_slide = MagicMock(shapes=[first_shape, no_text_shape])
+        second_slide = MagicMock(shapes=[second_shape])
 
         mock_prs = MagicMock()
-        mock_prs.slides = [mock_slide]
+        mock_prs.slides = [first_slide, second_slide]
 
         mock_presentation_cls = MagicMock(return_value=mock_prs)
         result = _pptx_extractor(mock_presentation_cls, io.BytesIO(b"fake"))
-        assert "[Slide 1]" in result
-        assert "Slide text" in result
+        assert result == "[Slide 1]\nFirst slide text\n[Slide 2]\nSecond slide text"

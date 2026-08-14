@@ -8,7 +8,7 @@ from urllib.error import HTTPError
 import pytest
 
 from mailarium.ews.errors import EWSAuthenticationError, EWSFaultError, EWSValidationError
-from mailarium.ews.gateway import EWSGateway, EWSItemRef
+from mailarium.ews.gateway import EWSFolder, EWSGateway, EWSItemRef
 from mailarium.ews.paging import IndexedPage, next_page
 from mailarium.ews.transport import EWSHTTPSSession, EWSTransport
 
@@ -23,6 +23,16 @@ class FixtureTransport:
     def execute(self, operation: str, envelope: bytes) -> bytes:
         self.calls.append((operation, envelope))
         return (FIXTURES / self.response_name).read_bytes()
+
+
+class PagedFixtureTransport:
+    def __init__(self, response_names: list[str]) -> None:
+        self.response_names = iter(response_names)
+        self.calls: list[tuple[str, bytes]] = []
+
+    def execute(self, operation: str, envelope: bytes) -> bytes:
+        self.calls.append((operation, envelope))
+        return (FIXTURES / next(self.response_names)).read_bytes()
 
 
 def test_find_items_parses_public_fixture_and_serializes_bounded_page() -> None:
@@ -45,6 +55,40 @@ def test_gateway_escapes_the_server_version_as_an_xml_attribute() -> None:
 
     assert b'Version="Exchange&amp;quot;2016"' not in transport.calls[0][1]
     assert b'Version="Exchange&quot;2016"' in transport.calls[0][1]
+
+
+def test_find_mail_folders_pages_deeply_and_keeps_only_physical_note_folders() -> None:
+    transport = PagedFixtureTransport(["find_folder_mail_page_one.xml", "find_folder_mail_page_two.xml"])
+
+    folders = EWSGateway(transport, mailbox_address="mailbox@example.test").find_mail_folders()
+
+    assert folders == (
+        EWSFolder("inbox-id", "Inbox", "IPF.Note", 12),
+        EWSFolder("archive-id", "Archive", "IPF.Note.Archive", 2),
+        EWSFolder("projects-id", "Projects", "IPF.Note.Projects", 4),
+    )
+    assert [operation for operation, _ in transport.calls] == ["FindFolder", "FindFolder"]
+    first_request, second_request = (request.decode() for _, request in transport.calls)
+    assert '<m:FindFolder Traversal="Deep">' in first_request
+    assert 'FieldURI="folder:DisplayName"' in first_request
+    assert 'FieldURI="folder:FolderClass"' in first_request
+    assert 'FieldURI="folder:TotalCount"' in first_request
+    assert 'DistinguishedFolderId Id="msgfolderroot"' in first_request
+    assert "<t:EmailAddress>mailbox@example.test</t:EmailAddress>" in first_request
+    assert 'Offset="0"' in first_request
+    assert 'Offset="5"' in second_request
+
+
+@pytest.mark.parametrize(
+    ("fixture", "error"),
+    [
+        ("find_folder_empty_partial.xml", "empty partial"),
+        ("find_folder_non_advancing.xml", "non-advancing"),
+    ],
+)
+def test_find_mail_folders_rejects_unsafe_partial_pages(fixture: str, error: str) -> None:
+    with pytest.raises(EWSFaultError, match=error):
+        EWSGateway(FixtureTransport(fixture), mailbox_address="mailbox@example.test").find_mail_folders()
 
 
 @pytest.mark.parametrize(
@@ -96,6 +140,31 @@ def test_get_items_returns_full_message_metadata_from_fixture() -> None:
     assert item.importance == "High"
     assert item.attachments[0].attachment_id == "att-1"
     assert b"item:Attachments" in transport.calls[0][1]
+
+
+def test_get_items_replaces_only_illegal_xml_numeric_character_references() -> None:
+    item = EWSGateway(FixtureTransport("get_item_illegal_numeric_reference.xml")).get_items([EWSItemRef("item-1", "ck-1")])[0]
+
+    assert item.body_text == "Decimal A; hex B; replacement \ufffd; huge \ufffd."
+
+
+def test_get_items_parses_only_the_enumerated_mail_item_family() -> None:
+    items = EWSGateway(FixtureTransport("get_item_mail_item_family.xml")).get_items([EWSItemRef("message", "ck")])
+
+    assert tuple(item.item_id for item in items) == (
+        "message",
+        "meeting-message",
+        "meeting-request",
+        "meeting-response",
+        "meeting-cancellation",
+    )
+    assert tuple(item.subject for item in items) == (
+        "Message",
+        "Meeting message",
+        "Meeting request",
+        "Meeting response",
+        "Meeting cancellation",
+    )
 
 
 def test_sync_and_attachment_primitives_are_bounded_and_fixture_driven() -> None:

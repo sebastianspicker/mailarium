@@ -93,6 +93,18 @@ def test_resolve_runtime_settings_applies_overrides(tmp_path):
     assert settings.embedding_model_revision == "a" * 40
 
 
+def test_resolve_runtime_settings_applies_false_boolean_overrides(monkeypatch):
+    monkeypatch.setenv("SPARSE_ENABLED", "true")
+    monkeypatch.setenv("IMAGE_SEARCH_ENABLED", "false")
+
+    from mailarium.config import resolve_runtime_settings
+
+    settings = resolve_runtime_settings(sparse_enabled=False, image_search_enabled=True)
+
+    assert settings.sparse_enabled is False
+    assert settings.image_search_enabled is True
+
+
 def test_custom_model_requires_explicit_revision(monkeypatch):
     from mailarium.config import Settings, resolve_runtime_settings
 
