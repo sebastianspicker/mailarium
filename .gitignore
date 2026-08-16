@@ -38,7 +38,10 @@ cypress/videos/
 .cache/
 .codegraph/
 .serena/
-.codacy/
+/.codacy/*
+!/.codacy/codacy.config.json
+!/.codacy/codacy.yaml
+!/.codacy/codacy.yml
 .bandit
 bandit-report.*
 *.sarif
