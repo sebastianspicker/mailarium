@@ -225,8 +225,7 @@ def _prepare_mailbox_projection(
 
 def _existing_canonical_email(db: Any, canonical_uid: str, email: Email) -> Any:
     existing = db.conn.execute(
-        "SELECT content_sha256,raw_source,folder,raw_body_text,raw_body_html,forensic_body_text "
-        "FROM emails WHERE uid=?",
+        "SELECT content_sha256,raw_source,folder,raw_body_text,raw_body_html,forensic_body_text FROM emails WHERE uid=?",
         (canonical_uid,),
     ).fetchone()
     if existing is not None:
