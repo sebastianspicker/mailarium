@@ -116,20 +116,13 @@ def test_compatibility_policy_pins_the_retirement_decision() -> None:
 
     for required_contract in (
         "## Governing 0.5 Retirement Decision",
-        "169 of the 299 deleted `src/` entries",
-        "other 130 `src/` entries",
-        "51 case-analysis and orchestration entries",
-        "28 matter,",
-        "20 legal and employment support entries",
-        "27 behavioral, comparative, and rhetoric-analysis entries",
-        "4 legacy CLI or model-backend compatibility entries",
-        "145 deleted test paths",
-        "all 97 deleted `docs/agent/` paths",
+        "This is a hard cutover",
+        "does not provide aliases, schema translation, or automatic data migration",
         "Rollback is version rollback, not an in-place schema downgrade",
-        "tests/test_repo_contracts_public_surface.py",
         "Live EWS interoperability remains a separately disclosed release limitation",
     ):
         assert required_contract in normalized
+    assert "docs/agent/" not in compatibility
 
 
 def test_release_status_preserves_the_exact_ews_verification_boundary() -> None:
@@ -211,7 +204,7 @@ def test_documentation_images_track_current_streamlit_controls() -> None:
 
 
 def test_public_metadata_uses_canonical_github_urls() -> None:
-    canonical = "https://github.com/sebastianspicker/outlook-email-rag"
+    canonical = "https://github.com/sebastianspicker/mailarium"
     urls = tomllib.loads(_read("pyproject.toml"))["project"]["urls"]
 
     assert urls["Repository"] == canonical

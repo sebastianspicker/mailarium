@@ -139,6 +139,7 @@ service_account.json
 .streamlit/secrets.toml
 
 # IDE
+/.mcp.json
 .vscode/
 .idea/
 *.swp

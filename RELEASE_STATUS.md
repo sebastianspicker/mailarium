@@ -1,59 +1,31 @@
-# Release Status
+# Candidate release status
 
-Evidence date: 2026-08-14
+Updated: 2026-08-18. This is a release checklist, not evidence for a published
+build or an immutable revision.
 
-Candidate version: `0.5.0a1`
+Status: not ready. The candidate package is `mailarium` `0.5.0a1`, an alpha
+for local Outlook `.olm` archive work on macOS 14 or later on Apple Silicon.
+Optional EWS support remains experimental. Offline verified; live EWS writes unverified.
 
-Publication status: not ready
+## Recorded local evidence
 
-## Candidate scope
+The most recent full local evidence was recorded on 2026-08-14. It included a
+valid lockfile, Python syntax checks, static demo checks, and a whitespace
+check. Dependency-enabled tests, type checks, security tools, artifact builds,
+and the tracked-only privacy scan were not current candidate evidence in that
+environment. Historical audit results do not replace checks on a release
+revision.
 
-The candidate provides local Outlook `.olm` ingestion, SQLite-authoritative
-storage, rebuildable USearch acceleration, CLI and MCP interfaces, a
-trusted-local Streamlit interface, and optional on-premises EWS workflows.
+## Required before publication
 
-The supported operator runtime is macOS 14 or later on Apple Silicon with
-Python 3.14.6. The Ubuntu CI job validates source compatibility but is not an
-operator-runtime claim.
-
-EWS remains experimental. Offline fixtures cover the implemented protocol and
-action contracts, but live server interoperability and write behavior have not
-been verified for this candidate. Offline verified; live EWS writes unverified.
-
-## Current local verification
-
-| Gate | Result |
-| --- | --- |
-| Lockfile | `uv lock --check` passed with 177 packages |
-| Dependency-enabled checks | Blocked in this checkout because its `.venv` does not contain Ruff, mypy, pytest, Bandit, pip-audit, or Streamlit; no dependency installation was performed |
-| Python syntax | AST parsing passed for 202 live package and script files |
-| Static demo | JavaScript syntax, four local references, three 1440 by 900 screenshots, and loopback HTML/CSS/JavaScript routes passed |
-| Public-tree privacy scan | The tracked-only scan fails against the real Git index while the intentional retirement deletions remain unstaged; exact-candidate proof requires a frozen reviewed tree |
-| Dependency audit | Not runnable in the current environment. The most recent recorded scan in `AUDIT_LEDGER.md` found 14 advisories across four locked packages after one existing exception |
-| Build and installed wheel | Unrun; the current environment lacks the declared setuptools build backend |
-| Diff whitespace | `git diff --check` passed |
-
-The audit ledger records the broader 2026-08-09 external-candidate suite. Those
-results are useful historical evidence, but they do not replace rerunning the
-gates on an exact candidate or resolving its dependency findings.
-
-## Publication requirements
-
-Before publishing `0.5.0a1`:
-
-1. Review and commit the complete package-namespace migration and file
-   deletions as one intentional candidate.
-2. Update or explicitly disposition all current dependency advisories under an
-   authorized lockfile change, then rerun the complete suite.
-3. Define the intended Codacy analyzer configuration and obtain a configured
-   result instead of the current `MissingConfig` state.
-4. Run both configured GitHub Actions jobs against that exact commit.
-5. Repeat the tracked-only privacy scan and artifact checks against the exact
-   committed tree.
-6. Confirm package-name and project-name availability for each publication
+1. Freeze and review an exact candidate revision.
+2. Resolve or explicitly disposition dependency advisories in an authorized
+   lockfile update, then run the complete configured suite.
+3. Run the privacy, artifact, installed-wheel, and configured CI checks against
+   that exact revision.
+4. Confirm package and project-name availability for each intended publication
    channel.
-7. If EWS support is included in release notes, validate a disposable
-   authorized server profile or state clearly that only offline protocol
-   fixtures were verified.
+5. If EWS is described in release notes, validate an authorized disposable
+   server profile or retain the offline-only limitation.
 
-Do not publish from the current unstaged worktree.
+Do not publish from an unreviewed working tree.

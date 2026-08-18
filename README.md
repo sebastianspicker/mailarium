@@ -76,8 +76,8 @@ Optional features require:
 Clone the repository and create an isolated environment:
 
 ```bash
-git clone https://github.com/sebastianspicker/outlook-email-rag.git
-cd outlook-email-rag
+git clone https://github.com/sebastianspicker/mailarium.git
+cd mailarium
 python3.14 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
