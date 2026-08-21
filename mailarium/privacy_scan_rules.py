@@ -50,18 +50,10 @@ LIVE_CORPUS_TERMS = (
     _term("current", " ", "matter"),
 )
 
-QA_EVAL_FIXTURE_PREFIX = "tests/fixtures/qa_eval/"
-QA_EVAL_PROVENANCE_PATTERN = re.compile(
-    r"\b(?:"
-    r"live(?:\s+eval)?\s+(?:corpus|mailbox|message|conversation|thread|fixture|run)"
-    r"|real\s+(?:archive|attachment|conversation|corpus|email|fixture|forwarded|image|mail|message|scan|source-shell|thread)"
-    r")\b",
-    re.IGNORECASE,
-)
-
 TRACKED_FORBIDDEN_PATH_PATTERNS = (
     re.compile(r"(^|/)\.env$"),
-    re.compile(r"(^|/)\.(agents|codacy|codegraph|codex|kilo|serena)/"),
+    re.compile(r"(^|/)\.(agents|codegraph|codex|kilo|serena)/"),
+    re.compile(r"^\.codacy/(?!codacy\.(?:config\.json|ya?ml)$)"),
     re.compile(r"(^|/)private/"),
     re.compile(r"(^|/)data/(vector-index|email_metadata\.db)"),
     re.compile(r"^AUDIT_REPORT_.*\.md$", re.IGNORECASE),
@@ -108,7 +100,6 @@ TEXT_PATTERNS = {
 TEXT_EXEMPT_PATHS = {
     "scripts/privacy_scan.py",
     "mailarium/privacy_scan_rules.py",
-    "tests/test_repo_contracts.py",
 }
 
 TEXT_EXEMPT_PREFIXES = (
@@ -164,9 +155,6 @@ def is_text_scan_path_candidate(path: str) -> bool:
     return not path.lower().endswith(TEXT_EXEMPT_SUFFIXES)
 
 
-def text_findings(path: str, text: str, *, include_qa_provenance: bool = True) -> list[Finding]:
+def text_findings(path: str, text: str) -> list[Finding]:
     """Classify text without exposing any matched content."""
-    findings = [Finding(category, path) for category, pattern in TEXT_PATTERNS.items() if pattern.search(text)]
-    if include_qa_provenance and path.startswith(QA_EVAL_FIXTURE_PREFIX) and QA_EVAL_PROVENANCE_PATTERN.search(text):
-        findings.append(Finding("non-synthetic-qa-provenance", path))
-    return findings
+    return [Finding(category, path) for category, pattern in TEXT_PATTERNS.items() if pattern.search(text)]

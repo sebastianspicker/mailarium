@@ -45,7 +45,7 @@ def _scan_history_text(root: Path) -> list[Finding]:
         if blob_hash not in scanned_blob_hashes:
             scanned_blob_hashes.add(blob_hash)
             text = run_git_bytes(root, ["cat-file", "-p", blob_hash], check=False).decode("utf-8", errors="ignore")
-            blob_matches[blob_hash] = [finding.category for finding in text_findings(path, text, include_qa_provenance=False)]
+            blob_matches[blob_hash] = [finding.category for finding in text_findings(path, text)]
         findings.extend(Finding(f"history-{category}", path) for category in blob_matches.get(blob_hash, []))
     return findings
 

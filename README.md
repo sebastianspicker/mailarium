@@ -181,8 +181,7 @@ python -m streamlit run mailarium/web_app.py --server.address 127.0.0.1
 ```
 
 The current pages are Search, Overview, People, Connections, Evidence, and
-Mailbox. The images below are synthetic 1440 by 900 documentation captures
-from maintained HTML fixtures, not live Streamlit sessions.
+Mailbox.
 
 [Open the static, simulated product demo](https://sebastianspicker.github.io/mailarium/).
 It uses synthetic fixture data and does not connect to a mailbox or Mailarium
@@ -200,12 +199,6 @@ Pages source. This repository does not contain a Pages deployment workflow;
 remote branch/folder configuration and the hosted revision must be verified
 separately. The demo is a simulated product explanation, not Streamlit or an
 OLM, SQLite, search, MCP, attachment, or EWS runtime test.
-
-![Search interface](docs/screenshots/streamlit-search-ui.png)
-
-![Archive overview](docs/screenshots/streamlit-dashboard-ui.png)
-
-![Empty archive](docs/screenshots/streamlit-empty-archive.png)
 
 ### MCP
 
@@ -228,9 +221,9 @@ mailarium/
 ├── mailarium/                 Python package
 │   ├── tools/                 MCP tool modules
 │   └── templates/             HTML export templates
-├── tests/                     Unit, integration, contract, and fixture tests
-├── scripts/                   Verification, maintenance, and smoke-test tools
-├── docs/                      Public technical references and images
+├── tests/                     Direct local contract tests
+├── scripts/                   Verification and maintenance tools
+├── docs/                      Public technical references
 ├── data/                      Sanitized tracked examples only
 ├── private/                   Ignored live inputs, runtime state, and exports
 ├── .github/workflows/ci.yml   CI definition
@@ -244,14 +237,14 @@ namespace.
 
 ## Development workflow
 
-Keep changes focused and use synthetic fixtures. Run the narrowest relevant
-test first, then the repository checks:
+Keep changes focused and use direct, temporary-data contract tests. Run the
+repository checks:
 
 ```bash
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy mailarium
-uv run pytest -q
+uv run pytest -q tests/test_contracts.py
 uv run python scripts/privacy_scan.py --tracked-only --json
 ```
 
@@ -273,16 +266,15 @@ CI uses Python 3.14.6 and runs:
 - lockfile validation
 - Ruff lint and format checks
 - mypy
-- pytest with an 80 percent coverage threshold
-- Streamlit smoke tests
+- direct parser, database, EWS, sanitization, and output-root contracts
 - Bandit
 - dependency and privacy scans
 - wheel and source distribution builds
 - release-artifact inspection
 - installed-wheel smoke tests
 
-Tests use synthetic mailbox records and fixtures. Live mailbox access is not
-part of the default test suite.
+Tests construct inputs locally. Live mailbox access is not part of the default
+test suite.
 
 ## Deployment and operation
 
