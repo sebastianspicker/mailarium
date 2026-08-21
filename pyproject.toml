@@ -69,7 +69,7 @@ image = [
     "torchvision==0.28.0",
 ]
 training = [
-    "datasets==5.0.0",
+    "datasets==5.0.1",
     "accelerate==1.14.0",
 ]
 ews = [
