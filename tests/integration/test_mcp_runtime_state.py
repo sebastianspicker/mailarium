@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -178,6 +179,7 @@ def test_leased_concurrent_first_callers_share_one_application_runtime_generatio
         return leased_runtime.mailbox_service(create_archive=True)
 
     async def exercise() -> None:
+        asyncio.get_running_loop().set_default_executor(ThreadPoolExecutor(max_workers=len(calls)))
         results = await asyncio.gather(*(state.offload(first_call, kind) for kind in calls))
         database = next(result for kind, result in zip(calls, results, strict=True) if kind == "database")
         search = next(result for kind, result in zip(calls, results, strict=True) if kind == "search")
