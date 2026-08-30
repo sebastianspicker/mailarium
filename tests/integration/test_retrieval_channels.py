@@ -22,6 +22,8 @@ def test_canonical_collection_serves_dense_bm25_sparse_and_hybrid_channels(monke
     """Each channel reads the same SQLite-owned corpus without loading a model."""
     runtime_home = tmp_path / "runtime"
     monkeypatch.setenv("MAILARIUM_RUNTIME_HOME", str(runtime_home))
+    monkeypatch.setenv("RERANK_ENABLED", "false")
+    monkeypatch.setenv("HYBRID_ENABLED", "false")
     sqlite_path = runtime_home / "archive.db"
     database = open_archive_database(str(sqlite_path))
     engine = SearchEngine(

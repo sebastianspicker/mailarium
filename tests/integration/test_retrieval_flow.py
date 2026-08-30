@@ -21,6 +21,8 @@ def test_filtered_retrieval_uses_canonical_vectors_and_deduplicates_email_chunks
     """One synthetic query exercises vector lookup, metadata filtering, and email-level deduplication."""
     runtime_home = tmp_path / "runtime"
     monkeypatch.setenv("MAILARIUM_RUNTIME_HOME", str(runtime_home))
+    monkeypatch.setenv("RERANK_ENABLED", "false")
+    monkeypatch.setenv("HYBRID_ENABLED", "false")
     database = open_archive_database(str(runtime_home / "archive.db"))
     engine = SearchEngine(
         vector_index_path=str(runtime_home / "vectors"),
