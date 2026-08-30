@@ -3,7 +3,7 @@
 
 Run this after building into ``dist/`` or pass a release directory or archives:
 
-    python scripts/check_release_artifacts.py dist
+    python scripts/release/check_artifacts.py dist
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ import zipfile
 from collections.abc import Iterable
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE_ROOT = ROOT / "mailarium" / "templates"
 PRIVATE_PATH_PREFIXES = (
     ".agents/",

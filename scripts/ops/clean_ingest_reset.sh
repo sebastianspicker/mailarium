@@ -4,7 +4,7 @@ set -euo pipefail
 
 usage() {
 	cat <<'EOF'
-Usage: bash scripts/clean_ingest_reset.sh [--dry-run] [--yes]
+Usage: bash scripts/ops/clean_ingest_reset.sh [--dry-run] [--yes]
 
 Reset the workspace for a fresh private ingestion run while preserving source
 inputs.
@@ -14,15 +14,12 @@ Preserved by default:
   - private/context.md
   - private/ingest/
   - private/README.local.md
-  - private/evaluations/materials/
 
 Purged by default:
   - private/runtime/ runtime stores, lock files, ledgers, and run history
-  - private/evaluations/results/
-  - private/evaluations/exports/
   - stale runtime database/vector-index leftovers under data/
   - repo-local scratch files like tmp_*.txt and .DS_Store
-  - generic caches handled by scripts/clean_workspace.sh
+  - generic caches handled by scripts/ops/clean_workspace.sh
 
 Options:
   --dry-run  Print planned removals without deleting files
@@ -32,7 +29,7 @@ EOF
 }
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "${script_dir}/.." && pwd)"
+repo_root="$(cd "${script_dir}/../.." && pwd)"
 
 dry_run=0
 confirmed=0
@@ -91,7 +88,6 @@ echo "  - ${repo_root}/private/files"
 echo "  - ${repo_root}/private/context.md"
 echo "  - ${repo_root}/private/ingest"
 echo "  - ${repo_root}/private/README.local.md"
-echo "  - ${repo_root}/private/evaluations/materials"
 
 declare -a purge_paths=(
 	"${repo_root}/private/runtime/current"
@@ -105,8 +101,6 @@ declare -a purge_paths=(
 	"${repo_root}/private/runtime/email_metadata.db-wal"
 	"${repo_root}/private/runtime/email_metadata_p73.db"
 	"${repo_root}/private/runtime/mcp_server.lock"
-	"${repo_root}/private/evaluations/results"
-	"${repo_root}/private/evaluations/exports"
 	"${repo_root}/data/vector-index"
 	"${repo_root}/data/email_metadata.db"
 	"${repo_root}/data/email_metadata.db-shm"
@@ -136,14 +130,12 @@ done < <(
 )
 
 if [[ "$dry_run" -eq 1 ]]; then
-	bash "${repo_root}/scripts/clean_workspace.sh" --dry-run
+	bash "${repo_root}/scripts/ops/clean_workspace.sh" --dry-run
 else
-	bash "${repo_root}/scripts/clean_workspace.sh"
+	bash "${repo_root}/scripts/ops/clean_workspace.sh"
 fi
 
 ensure_dir "${repo_root}/private/runtime/current"
-ensure_dir "${repo_root}/private/evaluations/results"
-ensure_dir "${repo_root}/private/evaluations/exports"
 
 if [[ "$dry_run" -eq 1 ]]; then
 	echo "Dry run complete. No files were deleted."

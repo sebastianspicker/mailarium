@@ -3,7 +3,7 @@
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "${script_dir}/.." && pwd)"
+repo_root="$(cd "${script_dir}/../.." && pwd)"
 runtime_root="${repo_root}/private/runtime/current"
 vector_index_path="${runtime_root}/vector-index"
 sqlite_path="${runtime_root}/email_metadata.db"

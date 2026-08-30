@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the Python dependency vulnerability audit with a bounded wall clock."""
+"""Audit the dependency graph exported from the canonical uv lockfile."""
 
 from __future__ import annotations
 
@@ -12,10 +12,9 @@ import tempfile
 from pathlib import Path
 
 DEFAULT_TIMEOUT_SECONDS = 180
-IGNORED_VULNS = (
-    "PYSEC-2026-597",  # nltk 3.9.4 / CVE-2026-12243: no fixed release available
-)
-AUDITED_EXTRAS = ("nlp", "image", "training", "ews-ntlm")
+IGNORED_VULNS: tuple[str, ...] = ()
+AUDITED_EXTRAS = ("nlp", "training", "ews-ntlm")
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _timeout_seconds(raw: str | None) -> int:
@@ -46,7 +45,7 @@ def _build_parser() -> argparse.ArgumentParser:
 def _export_locked_requirements(output_path: Path) -> bool:
     """Export the locked production environment for a deterministic audit."""
     uv = shutil.which("uv")
-    if uv is None or not Path("uv.lock").is_file():
+    if uv is None or not (REPO_ROOT / "uv.lock").is_file():
         return False
     env = os.environ.copy()
     env["UV_CACHE_DIR"] = str(output_path.parent / "uv-cache")
@@ -66,38 +65,38 @@ def _export_locked_requirements(output_path: Path) -> bool:
         check=False,
         stdout=subprocess.DEVNULL,
         env=env,
+        cwd=REPO_ROOT,
     )
     return completed.returncode == 0
 
 
-def _audit_command(requirements_path: str, *, locked: bool) -> list[str]:
-    """Build a pip-audit command that treats exported lock data as resolved and applies approved ignores."""
+def _audit_command(requirements_path: str) -> list[str]:
+    """Build a pip-audit command for a fully resolved lockfile export."""
     command = [sys.executable, "-m", "pip_audit", "-r", requirements_path]
-    if locked:
-        command.extend(("--no-deps", "--disable-pip"))
+    command.extend(("--no-deps", "--disable-pip"))
     for vulnerability_id in IGNORED_VULNS:
         command.extend(("--ignore-vuln", vulnerability_id))
     return command
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Export the current lock when present, run pip-audit with a timeout, and fail closed on stale lock data."""
+    """Audit a temporary export from the canonical lockfile and fail closed otherwise."""
     args = _build_parser().parse_args(argv)
     with tempfile.TemporaryDirectory(prefix="mailarium-audit-") as tmp_dir:
         locked_path = Path(tmp_dir) / "requirements.locked.txt"
-        locked = _export_locked_requirements(locked_path)
-        if Path("uv.lock").is_file() and not locked:
+        if not _export_locked_requirements(locked_path):
             print(
-                "Unable to export a current uv.lock; run `uv lock --check` and regenerate the lockfile before auditing.",
+                "Unable to export canonical uv.lock. Install uv and run `uv lock --check` before auditing.",
                 file=sys.stderr,
             )
             return 2
-        command = _audit_command(str(locked_path) if locked else "requirements.txt", locked=locked)
+        command = _audit_command(str(locked_path))
         try:
             completed = subprocess.run(  # nosemgrep
                 command,
                 check=False,
                 timeout=args.timeout_seconds,
+                cwd=REPO_ROOT,
             )
         except subprocess.TimeoutExpired:
             print(

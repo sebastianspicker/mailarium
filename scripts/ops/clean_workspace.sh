@@ -2,12 +2,16 @@
 # Remove generated workspace artifacts, with dry-run output and optional virtualenv cleanup.
 set -euo pipefail
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "${script_dir}/../.." && pwd)"
+cd "${repo_root}"
+
 usage() {
 	cat <<'EOF'
-Usage: bash scripts/clean_workspace.sh [--dry-run] [--include-venv]
+Usage: bash scripts/ops/clean_workspace.sh [--dry-run] [--include-venv]
 
-For a true clean-ingest reset that preserves source inputs but purges
-private runtime/results artifacts, use `bash scripts/clean_ingest_reset.sh`.
+For a true clean-ingest reset that preserves source inputs but purges private
+runtime artifacts, use `bash scripts/ops/clean_ingest_reset.sh`.
 
 Options:
   --dry-run       Print planned removals without deleting files
@@ -100,9 +104,7 @@ done < <(
 		-not -path "./.git/*" \
 		-not -path "./data/*" \
 		-not -path "./private/runtime" \
-		-not -path "./private/runtime/*" \
-		-not -path "./private/evaluations/results" \
-		-not -path "./private/evaluations/results/*"
+		-not -path "./private/runtime/*"
 )
 
 if [[ "$dry_run" -eq 1 ]]; then

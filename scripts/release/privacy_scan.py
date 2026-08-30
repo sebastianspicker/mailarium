@@ -8,14 +8,14 @@ import json
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# Direct script execution puts ``scripts/`` ahead of the package root.
+# Direct script execution puts ``scripts/release/`` ahead of the package root.
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from mailarium.privacy_scan_rules import Finding  # noqa: E402
-from mailarium.privacy_scan_service import scan as _scan  # noqa: E402
+from mailarium.privacy.privacy_scan_rules import Finding  # noqa: E402
+from mailarium.privacy.privacy_scan_service import scan as _scan  # noqa: E402
 
 __all__ = ("Finding", "main", "scan")
 

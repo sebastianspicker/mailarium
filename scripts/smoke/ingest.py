@@ -6,20 +6,18 @@ from __future__ import annotations
 import json
 import os
 import socket
+import sys
 import tempfile
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
 
-try:
-    from scripts._bootstrap import add_repository_root
-except ModuleNotFoundError:  # Direct execution resolves helpers from the script directory.
-    from _bootstrap import add_repository_root
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-ROOT = add_repository_root(__file__)
-
-_SMOKE_RUNTIME_ROOT = ROOT / "tests" / "private" / "ingest-smoke"
+_SMOKE_RUNTIME_ROOT = ROOT / "private" / "runtime" / "ingest-smoke"
 
 
 def _smoke_runtime_root() -> Path:
@@ -69,9 +67,6 @@ class _FakeEmbedder:
     def count(self) -> int:
         """Expose the accumulated chunk count for incremental-ingest assertions."""
         return self.chunk_total
-
-    def set_sparse_db(self, db) -> None:
-        """Accept sparse-index wiring without creating a second persistence layer."""
 
     def warmup(self) -> None:
         """Model successful embedder readiness without loading weights."""
@@ -138,47 +133,31 @@ def _run_ingest_with_fake_runtime(
     vector_index_path: Path,
     incremental: bool,
 ) -> dict[str, object]:
-    """Run the real ingest pipeline against in-memory storage doubles, restoring runtime construction afterward."""
-    from mailarium import ingest as ingest_module
-    from mailarium import ingest_pipeline as pipeline_family
+    """Run the public ingestion API against in-memory storage doubles."""
+    from mailarium.ingestion import ingest as ingest_archive
+    from mailarium.ingestion import production_ingest_dependencies
 
     fake_embedder = _run_ingest_with_fake_runtime.embedder
     fake_email_db = _run_ingest_with_fake_runtime.email_db
-    original_build_runtime = pipeline_family._build_runtime
 
     def _fake_build_runtime(*, settings, dry_run, vector_index_path, sqlite_path):
         return fake_embedder, fake_email_db
 
-    pipeline_family._build_runtime = _fake_build_runtime
-    try:
-        return pipeline_family.ingest_impl(
-            olm_path=str(olm_path),
-            vector_index_path=str(vector_index_path),
-            sqlite_path=str(sqlite_path),
-            batch_size=500,
-            max_emails=None,
-            dry_run=False,
-            extract_attachments=True,
-            extract_entities=False,
-            incremental=incremental,
-            embed_images=False,
-            resume=False,
-            timing=True,
-            get_settings=ingest_module.get_settings,
-            resolve_runtime_summary=ingest_module.resolve_runtime_summary,
-            should_enable_image_embedding=ingest_module.should_enable_image_embedding,
-            parse_olm=ingest_module.parse_olm,
-            chunk_email=ingest_module.chunk_email,
-            chunk_attachment=ingest_module.chunk_attachment,
-            hash_file_sha256=ingest_module._hash_file_sha256,
-            resolve_entity_extractor=ingest_module._resolve_entity_extractor,
-            resolve_entity_extractor_provenance=ingest_module._entity_extractor_provenance,
-            exchange_entities_from_email=ingest_module._exchange_entities_from_email,
-            embed_pipeline_cls=ingest_module._EmbedPipeline,
-            make_progress_bar=ingest_module._make_progress_bar,
-        )
-    finally:
-        pipeline_family._build_runtime = original_build_runtime
+    return ingest_archive(
+        olm_path=str(olm_path),
+        vector_index_path=str(vector_index_path),
+        sqlite_path=str(sqlite_path),
+        batch_size=500,
+        max_emails=None,
+        dry_run=False,
+        extract_attachments=True,
+        extract_entities=False,
+        incremental=incremental,
+        embed_images=False,
+        resume=False,
+        timing=True,
+        **production_ingest_dependencies(build_runtime=_fake_build_runtime).as_kwargs(),
+    )
 
 
 _run_ingest_with_fake_runtime.embedder = _FakeEmbedder()
@@ -240,7 +219,7 @@ def _fake_runtime_reason(exc: BaseException) -> str:
 def main() -> int:
     """Ingest the synthetic archive twice, using the native backend when available and a bounded fake fallback offline."""
     _configure_offline_runtime()
-    from mailarium.ingest import ingest
+    from mailarium.ingestion import ingest_archive
 
     with tempfile.TemporaryDirectory(prefix="run-", dir=_smoke_runtime_root()) as tmp:
         tmp_path = Path(tmp)
@@ -268,7 +247,7 @@ def main() -> int:
             runtime_mode = "fake_runtime_missing_usearch"
         else:
             try:
-                first = ingest(
+                first = ingest_archive(
                     str(olm_path),
                     sqlite_path=str(sqlite_path),
                     vector_index_path=str(vector_index_path),
@@ -276,7 +255,7 @@ def main() -> int:
                     incremental=False,
                     timing=True,
                 )
-                second = ingest(
+                second = ingest_archive(
                     str(olm_path),
                     sqlite_path=str(sqlite_path),
                     vector_index_path=str(vector_index_path),
