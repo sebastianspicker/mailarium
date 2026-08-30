@@ -219,6 +219,7 @@ def _fake_runtime_reason(exc: BaseException) -> str:
 def main() -> int:
     """Ingest the synthetic archive twice, using the native backend when available and a bounded fake fallback offline."""
     _configure_offline_runtime()
+    from mailarium.archive.usearch_loader import import_usearch
     from mailarium.ingestion import ingest_archive
 
     with tempfile.TemporaryDirectory(prefix="run-", dir=_smoke_runtime_root()) as tmp:
@@ -229,8 +230,10 @@ def main() -> int:
         _build_smoke_olm(olm_path)
 
         try:
-            import usearch  # noqa: F401
-        except ModuleNotFoundError:
+            import_usearch()
+        except ModuleNotFoundError as exc:
+            if exc.name != "usearch":
+                raise
             _reset_fake_runtime()
             first = _run_ingest_with_fake_runtime(
                 olm_path=olm_path,

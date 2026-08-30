@@ -18,6 +18,7 @@ from typing import Any
 import numpy as np
 
 from .database import ArchiveDatabase
+from .usearch_loader import import_index
 
 DEFAULT_PAGE_SIZE = 1000
 _OVERFETCH_MULTIPLIER = 4
@@ -573,8 +574,7 @@ class SQLiteVectorCollection:
             self.checkpoint()
             return
         try:
-            from usearch.index import Index
-
+            Index = import_index()
             index = Index.restore(str(path), view=False)
             if index is None:
                 raise RuntimeError("USearch index restore returned no index")
@@ -885,8 +885,7 @@ def _record_from_row(row: sqlite3.Row) -> VectorRecord:
 
 def _build_usearch_index(records: Sequence[VectorRecord], dimensions: int) -> Any:
     """Build a cosine USearch index keyed by stable database vector IDs."""
-    from usearch.index import Index
-
+    Index = import_index()
     index = Index(
         ndim=dimensions,
         metric="cos",
